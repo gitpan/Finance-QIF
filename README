@@ -1,0 +1,111 @@
+NAME
+    Finance::QIF - Parse and create Quicken Interchange Format files
+
+SYNOPSIS
+      use Finance::QIF;
+
+  Parsing existing QIFs
+      my $qif = Finance::QIF->parse_file("foo.qif");
+      $qif = Finance::QIF->parse("foo.qif");
+
+      for my $entry ($qif->transactions) {
+        print $entry->payee, ": ", $entry->amount,"\n";
+      }
+
+  Exporting data as QIF
+      my $qif = Finance::QIF->new(type => "Bank");
+      $qif->add($transaction);
+      $qif->add(
+        amount   => -50.00,
+        payee    => "Simon Cozens",
+        memo     => "We really should give him more for producing all these 
+                     cool modules",
+        date     => "12/19/2002",
+        category => "Advertising/Subliminal"
+      );
+
+      print $qif->as_qif;
+      print $qif; # Stringification is overloaded too
+
+DESCRIPTION
+    This module handles and creates files in Intuit's Quicken Interchange
+    Format. A spec for this format can be found at
+    <http://www.respmech.com/mym2qifw/qif_new.htm>; this implementation is
+    liberal in terms of date formats, doing no date checking and simply
+    passing on whatever it receives.
+
+METHODS
+  new(type => "Bank")
+    Create a new, blank QIF object. A type must be specified, but for this
+    release, the only thing we support is "Bank" accounts, since I'm not
+    wise enough to have investment accounts yet and so don't need that
+    functionality.
+
+  as_qif()
+    Returns the QIF object as a string in QIF format.
+
+  add
+    Adds a new transaction; this may be a "Finance::QIF::Transaction" object
+    (see below) or a hash.
+
+  parse_file
+    Creates a "Finance::QIF" object from an existing file.
+
+  parse
+    Creates a "Finance::QIF" object from a string.
+
+  transactions
+    Returns a list of "Finance::QIF::Transaction"s. See below.
+
+Finance::QIF::Transaction
+    Individual transactions are objects of the class
+    "Finance::QIF::Transaction". These objects will be returned from the
+    "transactions" method on a "Finance::QIF" object, and can be created,
+    queried and modified with the following methods.
+
+  new
+    Creates a new transaction object and populates it with data.
+
+  amount
+    Gets/sets the transaction's amount. No currency is implied. The amount
+    is always returned as a string formatted to two decimal places.
+
+    REMEMBER that outgoing transactions should always be specified as a
+    negative amount.
+
+  date / payee / memo / address / category / cleared / number
+    These are ordinary get-set methods for the specified fields. "Number" in
+    QIF refers to a check or reference number.
+
+  splits
+    Gets and sets an array of split values each specified as a hash
+    reference. For example:
+
+        $item->amount(-30);
+        $item->payee("Cash withdrawal");
+        $item->splits(
+            { category => "Food/Groceries", amount => 12.00 },
+            { category => "Stationery",     amount => 5.00  },
+            { category => "Dining Out",     amount => 13.00 }
+        )
+
+  add_to_splits
+    Adds a split entry (as a hash reference) to the split list. This does
+    not affect the amount of the transaction.
+
+        $item->add_to_splits(
+            { category => "Dining Out",     amount => 13.00 }
+        );
+
+  as_qif
+    Returns the transaction in QIF format.
+
+AUTHOR
+    Simon Cozens, "simon@cpan.org"
+
+    You may use and redistribute this module under the terms of the Artistic
+    license.
+
+SEE ALSO
+    perl.
+

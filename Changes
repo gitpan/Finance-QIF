@@ -1,0 +1,6 @@
+Revision history for Perl extension Finance::QIF.
+
+0.01  Thu Dec 19 15:00:07 2002
+	- original version; created by h2xs 1.21 with options
+		-XA -n Finance::QIF
+
