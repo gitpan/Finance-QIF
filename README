@@ -18,7 +18,7 @@ SYNOPSIS
       $qif->add(
         amount   => -50.00,
         payee    => "Simon Cozens",
-        memo     => "We really should give him more for producing all these 
+        memo     => "We really should have given him more for producing all these 
                      cool modules",
         date     => "12/19/2002",
         category => "Advertising/Subliminal"
@@ -100,24 +100,16 @@ Finance::QIF::Transaction
   as_qif
     Returns the transaction in QIF format.
 
+LICENSE
+    Copyright (c) 2004 by Nathan McFarland. All rights reserved. This
+    program is free software; you may redistribute it and or modify it under
+    the terms of the Artistic license.
 
+MAINTAINER
+    Nathan McFarland, "nmcfarl@cpan.org"
 
-LICENSE 
-
-  Copyright (c) 2004 by Nathan McFarland. All rights reserved. This program
-  is free software; you may redistribute it and or modify it under the same
-  terms as Perl itself.
-
-MAINTAINER 
-
-  Nathan McFarland, <nmcfarl@cpan.org>
-
-ORIGINAL AUTHOR 
-
-  Simon Cozens, simon@cpan.org
-
-  You may use and redistribute this module under the terms of the Artistic
-  license.
+ORIGINAL AUTHOR
+    Simon Cozens, "simon@cpan.org"
 
 SEE ALSO
     perl.

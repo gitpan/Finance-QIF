@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use overload '""' => \&as_qif;
 
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 
 =head1 NAME
 
@@ -60,14 +60,14 @@ functionality.
 
 =cut
 
+
+
 sub new {
     my ($class, %args) = @_;
-    croak "Can only deal with bank accounts right now" 
-        unless $args{type} eq "Bank";
-    bless {
-        type => $args{type},
-        transactions => []
-    }, $class;
+    die " \nCan only deal with bank accounts right now\n "    unless $args{type} eq "Bank";
+    my $self = bless \%args, $class;
+    $self->{transactions} = [];
+    return $self;
 }
 
 =head2 as_qif()
@@ -119,7 +119,7 @@ Creates a C<Finance::QIF> object from a string.
 
 sub parse {
     my ($class, $data) = @_;
-    my @lines = split /\n/, $data;
+    my @lines = split /[\r\n]/, $data;
     my $type = shift @lines;
     croak "Can only handle bank accounts right now, not type $type"
         unless $type eq "!Type:Bank";
@@ -196,9 +196,15 @@ negative amount.
 =cut
 
 sub amount { 
-    my $self = shift; $self->{amount} = $_[0] if defined $_[0];
-    $self->{amount} =~ s/,//g;
-    return sprintf("%.2f",$self->{amount});
+  my $self = shift; 
+  if (defined $_[0] )
+  {
+    $self->{amount} = $_[0];
+    $self->{amount} =~ s/,// ;     
+  }
+    
+  $self->{amount} = 0 if !$self->{amount} ;
+  return sprintf("%.2f",$self->{amount});
 }
 
 =head2 date / payee / memo / address / category / cleared / number
@@ -293,7 +299,7 @@ sub as_qif {
         }
     }
     if (ref $self->{splits}) {
-        for (@$self->{splits}) {
+        for (@{$self->{splits}}) {
             $out .= "S". $_->{category}."\n";
             $out .= "E". $_->{memo}."\n" if defined $_->{memo};
             $out .= '$'. $_->{amount}."\n";
@@ -309,8 +315,9 @@ sub as_qif {
 =head1 LICENSE 
 
 Copyright (c) 2004 by Nathan McFarland. All rights reserved. This program
-is free software; you may redistribute it and or modify it under the same
-terms as Perl itself.
+is free software; you may redistribute it and or modify it under the terms 
+of the Artistic license.
+
 
 =head1 MAINTAINER 
 
@@ -319,9 +326,6 @@ Nathan McFarland, C<nmcfarl@cpan.org>
 =head1 ORIGINAL AUTHOR
 
 Simon Cozens, C<simon@cpan.org>
-
-You may use and redistribute this module under the terms of the Artistic
-license.
 
 =head1 SEE ALSO
 
