@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use overload '""' => \&as_qif;
 
-our $VERSION = '1.00';
+our $VERSION = '1.01';
 
 =head1 NAME
 
@@ -96,7 +96,7 @@ sub add {
         (ref $_[0] and $_[0]->isa("Finance::QIF::Transaction")) ?
             shift
         :
-         new Finance::QIF::Transaction(@_);
+         (Finance::QIF::Transaction->new(@_));
 }
 
 =head2 parse_file
@@ -197,6 +197,7 @@ negative amount.
 
 sub amount { 
     my $self = shift; $self->{amount} = $_[0] if defined $_[0];
+    $self->{amount} =~ s/,//g;
     return sprintf("%.2f",$self->{amount});
 }
 
