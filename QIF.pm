@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use overload '""' => \&as_qif;
 
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 =head1 NAME
 
@@ -32,7 +32,7 @@ Finance::QIF - Parse and create Quicken Interchange Format files
   $qif->add(
     amount   => -50.00,
     payee    => "Simon Cozens",
-    memo     => "We really should give him more for producing all these 
+    memo     => "We really should have given him more for producing all these 
                  cool modules",
     date     => "12/19/2002",
     category => "Advertising/Subliminal"
@@ -302,7 +302,21 @@ sub as_qif {
     return $out;
 }
 
-=head1 AUTHOR
+
+
+
+
+=head1 LICENSE 
+
+Copyright (c) 2004 by Nathan McFarland. All rights reserved. This program
+is free software; you may redistribute it and or modify it under the same
+terms as Perl itself.
+
+=head1 MAINTAINER 
+
+Nathan McFarland, C<nmcfarl@cpan.org>
+
+=head1 ORIGINAL AUTHOR
 
 Simon Cozens, C<simon@cpan.org>
 

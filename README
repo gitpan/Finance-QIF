@@ -100,11 +100,24 @@ Finance::QIF::Transaction
   as_qif
     Returns the transaction in QIF format.
 
-AUTHOR
-    Simon Cozens, "simon@cpan.org"
 
-    You may use and redistribute this module under the terms of the Artistic
-    license.
+
+LICENSE 
+
+  Copyright (c) 2004 by Nathan McFarland. All rights reserved. This program
+  is free software; you may redistribute it and or modify it under the same
+  terms as Perl itself.
+
+MAINTAINER 
+
+  Nathan McFarland, <nmcfarl@cpan.org>
+
+ORIGINAL AUTHOR 
+
+  Simon Cozens, simon@cpan.org
+
+  You may use and redistribute this module under the terms of the Artistic
+  license.
 
 SEE ALSO
     perl.
