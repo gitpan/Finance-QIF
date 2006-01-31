@@ -1,0 +1,6 @@
+#!/usr/bin/perl
+$/="\r";
+while(<>) {
+  chomp;
+  print $_."\n";
+}

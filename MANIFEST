@@ -1,7 +1,11 @@
 Changes
+lib/Finance/QIF.pm
 Makefile.PL
 MANIFEST
-QIF.pm
 README
-t/1.t
-META.yml                                 Module meta-data (added by MakeMaker)
+t/Finance-QIF.t
+t/mycat
+t/qifdumper
+t/readwrite
+t/test.qif
+t/uncat

@@ -1,0 +1,16 @@
+use Finance::QIF;
+
+my $in=Finance::QIF->new(file=>$ARGV[0]);
+my $out=Finance::QIF->new(file=>">write.qif");
+
+my $header="";
+while (my $record=$in->next()) {
+  if ($header ne $record->{header}) {
+    $out->header($record->{header});
+    $header=$record->{header};
+  }
+  $out->write($record);
+}
+
+$in->close();
+$out->close();

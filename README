@@ -1,116 +1,45 @@
-NAME
-    Finance::QIF - Parse and create Quicken Interchange Format files
+Finance-QIF version 2.00 (BETA)
+=======================
 
-SYNOPSIS
-      use Finance::QIF;
+Simple QIF file reader. QIF is a common financial software export file
+format.  This module was developed to support Quicken QIF exports.
+This module reads QIF records from a data file passing each successive
+record to the caller for processing.
 
-  Parsing existing QIFs
-      my $qif = Finance::QIF->parse_file("foo.qif");
-      $qif = Finance::QIF->parse("foo.qif");
+INSTALLATION
 
-      for my $entry ($qif->transactions) {
-        print $entry->payee, ": ", $entry->amount,"\n";
-      }
+To install this module type the following:
 
-  Exporting data as QIF
-      my $qif = Finance::QIF->new(type => "Bank");
-      $qif->add($transaction);
-      $qif->add(
-        amount   => -50.00,
-        payee    => "Simon Cozens",
-        memo     => "We really should have given him more for producing all these 
-                     cool modules",
-        date     => "12/19/2002",
-        category => "Advertising/Subliminal"
-      );
+   perl Makefile.PL
+   make
+   make test
+   make install
 
-      print $qif->as_qif;
-      print $qif; # Stringification is overloaded too
+DEPENDENCIES
 
-DESCRIPTION
-    This module handles and creates files in Intuit's Quicken Interchange
-    Format. A spec for this format can be found at
-    <http://www.respmech.com/mym2qifw/qif_new.htm>; this implementation is
-    liberal in terms of date formats, doing no date checking and simply
-    passing on whatever it receives.
+This module requires these other modules and libraries:
 
-METHODS
-  new(type => "Bank")
-    Create a new, blank QIF object. A type must be specified, but for this
-    release, the only thing we support is "Bank" accounts, since I'm not
-    wise enough to have investment accounts yet and so don't need that
-    functionality.
+  Carp, IO::File
 
-  as_qif()
-    Returns the QIF object as a string in QIF format.
+COPYRIGHT AND LICENSE
 
-  add
-    Adds a new transaction; this may be a "Finance::QIF::Transaction" object
-    (see below) or a hash.
+Copyright (C) 2006 by Matthew McGillis
 
-  parse_file
-    Creates a "Finance::QIF" object from an existing file.
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
 
-  parse
-    Creates a "Finance::QIF" object from a string.
+COMMENTS
 
-  transactions
-    Returns a list of "Finance::QIF::Transaction"s. See below.
+We have put together a new version of FInance::QIF. I was looking for something that could process a complete export from Quicken. I took a look at the original Finance::QIF currently available at CPAN and found it could not process much of a typical Quicken QIF file. This new beta version of Finance::QIF is fairly different from the existing FInance::QIF. We have contacted the previous owner and asked for permission to take ownership of the existing Finance::QIF. They agreed to let us pick up the code.
 
-Finance::QIF::Transaction
-    Individual transactions are objects of the class
-    "Finance::QIF::Transaction". These objects will be returned from the
-    "transactions" method on a "Finance::QIF" object, and can be created,
-    queried and modified with the following methods.
+What we are currently looking for is feedback from existing users of Finance::QIF on how important it is for us to maintain backwards compatibility. We could devote some time to layering the existing Finance::QIF API's on top of the new core file reader/writer so that any existing code should work with out modifications. However those API's may still be fairly limited in what they might support when compared to the current set of API's.
 
-  new
-    Creates a new transaction object and populates it with data.
+The  software we  have is in beta and available at http://sourceforge.net/projects/finance-qif
 
-  amount
-    Gets/sets the transaction's amount. No currency is implied. The amount
-    is always returned as a string formatted to two decimal places.
+Keep in mind this  is still Beta and all though it has worked well for my purposes I'm not real confident that the produced QIF files through the writes are 100% accepted by imports back into Quicken. So I wouldn't go trying an import on a critical Quicken file. I also know that Quicken produces some flags for Payee's that my code doesn't know what to do with because I have not found any documentation that tells me what the flags represent.
 
-    REMEMBER that outgoing transactions should always be specified as a
-    negative amount.
+For those interested, take a look at the beta release of what we have and if we get enough direction to spend time on backwards compatibility we will.  We are also debating adding support for returning objects rather than hashes. Again strong feelings one way or the other on this would help sway us.
 
-  date / payee / memo / address / category / cleared / number
-    These are ordinary get-set methods for the specified fields. "Number" in
-    QIF refers to a check or reference number.
-
-  splits
-    Gets and sets an array of split values each specified as a hash
-    reference. For example:
-
-        $item->amount(-30);
-        $item->payee("Cash withdrawal");
-        $item->splits(
-            { category => "Food/Groceries", amount => 12.00 },
-            { category => "Stationery",     amount => 5.00  },
-            { category => "Dining Out",     amount => 13.00 }
-        )
-
-  add_to_splits
-    Adds a split entry (as a hash reference) to the split list. This does
-    not affect the amount of the transaction.
-
-        $item->add_to_splits(
-            { category => "Dining Out",     amount => 13.00 }
-        );
-
-  as_qif
-    Returns the transaction in QIF format.
-
-LICENSE
-    Copyright (c) 2004 by Nathan McFarland. All rights reserved. This
-    program is free software; you may redistribute it and or modify it under
-    the terms of the Artistic license.
-
-MAINTAINER
-    Nathan McFarland, "nmcfarl@cpan.org"
-
-ORIGINAL AUTHOR
-    Simon Cozens, "simon@cpan.org"
-
-SEE ALSO
-    perl.
+Regards,
+Matthew McGillis
 

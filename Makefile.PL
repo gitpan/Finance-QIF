@@ -1,11 +1,19 @@
 use ExtUtils::MakeMaker;
+
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
 WriteMakefile(
-    'NAME'		=> 'Finance::QIF',
-    'VERSION_FROM'	=> 'QIF.pm', # finds $VERSION
-    'PREREQ_PM'		=> {}, # e.g., Module::Name => 1.1
-    ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
-      (ABSTRACT_FROM => 'QIF.pm', # retrieve abstract from module
-       AUTHOR     => 'Nathan McFarland <nmcfarl@cpan.org>') : ()),
+    'NAME'         => 'Finance::QIF',
+    'VERSION_FROM' => 'lib/Finance/QIF.pm',
+    'PREREQ_PM'    => {},                     # e.g., Module::Name => 1.1
+    (
+        $] >= 5.005
+        ?                                     ## keywords supported since 5.005
+          (
+            ABSTRACT_FROM => 'lib/Finance/QIF.pm',
+            AUTHOR        => 'Matthew McGillis <matthew@mcgillis.org>'
+              . ' and Phil Lobbes <phil@perkpartners.com>'
+          )
+        : ()
+    ),
 );
