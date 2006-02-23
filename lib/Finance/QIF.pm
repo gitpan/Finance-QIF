@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use IO::File;
 
-our $VERSION = '2.00_01';
+our $VERSION = '2.00';
 $VERSION = eval $VERSION;
 
 my %noninvestment = (
@@ -49,7 +49,7 @@ my %account = (
     "X" => "tax",
     "A" => "note",
     "T" => "type",
-    'B' => "balance"
+    "B" => "balance"
 );
 
 my %category = (
@@ -88,7 +88,7 @@ my %security = (
     "N" => "security",
     "S" => "symbol",
     "T" => "type",
-    "G" => "goal"
+    "G" => "goal",
 );
 
 my %budget = (
@@ -107,13 +107,14 @@ my %payee = (
     "C" => "city",
     "S" => "state",
     "Z" => "zip",
+    "Y" => "country",
     "N" => "phone",
     "#" => "account"
 );
 
 my %prices = (
     "S" => "symbol",
-    "P" => "price",
+    "P" => "price"
 );
 
 my %price = (
@@ -149,16 +150,20 @@ my %header = (
 sub new {
     my $class = shift;
     my $self  = {@_};
-    $self->{file}                    ||= "";
-    $self->{output_record_separator} ||= "\r";
-    $self->{input_record_separator}  ||= "\r";
+
     $self->{debug}                   ||= 0;
+    $self->{file}                    ||= "";
+    $self->{output_record_separator} ||= $\;
+    $self->{input_record_separator}  ||= $/;
     $self->{linecount} = 0;
+
+    map( $self->{$_} = undef,    # initialize internally used variables
+        qw(_filehandle header currentheader reversemap reversesplitsmap) );
     bless( $self, $class );
-    print( "File name: ", $self->{file}, "\n" ) if ( $self->{debug} );
 
     if ( $self->{file} ) {
-        $self->open();
+        print( "File name: ", $self->{file}, "\n" ) if ( $self->{debug} );
+        $self->open;
     }
     return $self;
 }
@@ -171,16 +176,26 @@ sub file {
     return $self->{file};
 }
 
+sub _filehandle {
+    my $self = shift;
+    if ( $_[0] ) {
+        my $file = shift;
+        $self->{_filehandle} = IO::File->new($file)
+          or croak("Failed to open file '$file': $!");
+    }
+    if ( !$self->{_filehandle} ) {
+        croak("No filehandle available");
+    }
+    return $self->{_filehandle};
+}
+
 sub open {
     my $self = shift;
     if ( $_[0] ) {
-        file(shift);
+        $self->file(shift);
     }
-    if ( $self->{file} ) {
-        $self->{filehandle} = new IO::File $self->{file};
-        if ( !defined( $self->{filehandle} ) ) {
-            croak 'Failed to open file "' . $self->{file} . "\".";
-        }
+    if ( $self->file ) {
+        $self->_filehandle( $self->file );
     }
     else {
         croak "No file specified.";
@@ -191,14 +206,14 @@ sub next {
     my $self = shift;
     my %object;
     my $continue = 1;
-    if ( $self->{filehandle}->eof ) {
+    if ( $self->_filehandle->eof ) {
         return undef;
     }
     if ( exists( $self->{header} ) ) {
         $object{header} = $self->{header};
     }
-    while ( !$self->{filehandle}->eof && $continue ) {
-        my $line = $self->_getline();
+    while ( !$self->_filehandle->eof && $continue ) {
+        my $line = $self->_getline;
         next if ( $line =~ /^\s*$/ );
         my ( $field, $value ) = $self->_parseline($line);
         if ( $field eq '!' ) {
@@ -214,7 +229,8 @@ sub next {
             }
             else {
                 if ( !exists( $header{ $object{header} } ) ) {
-                    $self->_warning("Unknown header can't process line");
+                    $self->_warning(
+                        "Unknown header '$object{header}' can't process line");
                 }
                 elsif ( $object{header} eq "Type:Prices" ) {
                     $object{"symbol"} = $field;
@@ -272,7 +288,6 @@ sub next {
 sub _parseline {
     my $self = shift;
     my $line = shift;
-    chop($line);
     my @result;
     if (   $line !~ /^!/
         && exists( $self->{header} )
@@ -298,8 +313,9 @@ sub _parseline {
 
 sub _getline {
     my $self = shift;
-    local $/ = $self->{output_record_separator};
-    my $line = $self->{filehandle}->getline;
+    local $/ = $self->{input_record_separator};
+    my $line = $self->_filehandle->getline;
+    chomp($line);
     $self->{linecount}++;
     return $line;
 }
@@ -307,23 +323,23 @@ sub _getline {
 sub _warning {
     my $self    = shift;
     my $message = shift;
-    carp $message
-      . ' in file "'
-      . $self->{file}
-      . '" line '
-      . $self->{linecount};
+    carp(   $message
+          . ' in file "'
+          . $self->file
+          . '" line '
+          . $self->{linecount} );
 }
 
 sub header {
     my $self   = shift;
     my $header = shift;
-    my $file   = $self->{filehandle};
+    my $fh     = $self->_filehandle;
     local $\ = $self->{output_record_separator};
-    print( $file "!", $header );
+    print( $fh "!", $header );
 
-    # used during write to validate passed record is appropriate for current
-    # header also generate revers lookup for mapping record values to file
-    # key identifier.
+    # used during write to validate passed record is appropriate for
+    # current header also generate reverse lookup for mapping record
+    # values to file key identifier.
     $self->{currentheader} = $header;
     foreach my $key ( keys %{ $header{$header} } ) {
         $self->{reversemap}{ $header{$header}{$key} } = $key;
@@ -391,7 +407,7 @@ sub write {
                             for ( my $count = 0 ; $count < 3 ; $count++ ) {
                                 if ( $count <= $#lines ) {
                                     $self->_writeline( "A", $count,
-                                        $lines[ $count ] );
+                                        $lines[$count] );
                                 }
                                 else {
                                     $self->_writeline( "A", $count );
@@ -459,26 +475,26 @@ sub write {
 
 sub _writeline {
     my $self = shift;
-    my $file = $self->{filehandle};
+    my $fh   = $self->_filehandle;
     local $\ = $self->{output_record_separator};
-    print $file @_;
+    print( $fh @_ );
     $self->{linecount}++;
 }
 
 sub reset {
     my $self = shift;
-    $self->{filehandle}->seek( 0, 0 );
+    $self->_filehandle->seek( 0, 0 );
     $self->next;
 }
 
 sub close {
     my $self = shift;
-    $self->{filehandle}->close();
+    $self->_filehandle->close;
 }
 
 sub DESTROY {
     my $self = shift;
-    $self->close();
+    $self->close;
 }
 
 1;
@@ -492,10 +508,10 @@ Finance::QIF - Parse and create Quicken Interchange Format files
 =head1 SYNOPSIS
 
   use Finance::QIF;
-
+  
   my $qif = Finance::QIF->new( file => "test.qif" );
-
-  while ( my $record = $qif->next() ) {
+  
+  while ( my $record = $qif->next ) {
       print( "Header: ", $record->{header}, "\n" );
       foreach my $key ( keys %{$record} ) {
           next
@@ -932,11 +948,6 @@ month.
 This is a list online payee accounts.  The following values are
 supported for online payee account records.
 
-Note: A common field for this type is identified by a "Y" however so
-far I have been unable to determine what that field represents.  As a
-result this software currently doesn't support it and will raise a
-warning when ever it is found.
-
 =over
 
 =item name
@@ -958,6 +969,10 @@ State of payee
 =item zip
 
 Zipcode of payee.
+
+=item country
+
+Country of payee.
 
 =item phone
 
@@ -1047,17 +1062,25 @@ For output files must include ">" with file name.
 
 =item output_record_separator
 
-Can be used to redefine the QIF output record separator.  Default is
-"\r".
+Can be used to redefine the QIF output record separator.
 
   my $out = Finance::QIF->new( output_record_separator => "\n" );
 
+Note: For MacOS X it will most likely be necessary to change this to
+"\r". Quicken on MacOS X generates files with "\r" as the seperator
+which is typical of Mac however the native perl in MacOS X is unix
+based and uses the default unix seperator which is "\n".
+
 =item input_record_separator
 
-Can be used to redefine the QIF input record separator.  Default is
-"\r".
+Can be used to redefine the QIF input record separator.
 
   my $in = Finance::QIF->new( input_record_separator => "\n" );
+
+Note: For MacOS X it will most likely be necessary to change this to
+"\r". Quicken on MacOS X generates files with "\r" as the seperator
+which is typical of Mac however the native perl in MacOS X is unix
+based and uses the default unix seperator which is "\n".
 
 =item debug
 
@@ -1127,7 +1150,7 @@ Read an existing QIF file then write out to new QIF file.
 
   my $in  = Finance::QIF->new( file => "input.qif" );
   my $out = Finance::QIF->new( file => ">write.qif" );
-
+  
   my $header = "";
   while ( my $record = $in->next() ) {
       if ( $header ne $record->{header} ) {
@@ -1136,14 +1159,9 @@ Read an existing QIF file then write out to new QIF file.
       }
       $out->write($record);
   }
-
+  
   $in->close();
   $out->close();
-
-=head1 TODO
-
-Type:Payee is not complete.  Real exports from Quicken with this
-feature being used are required to complete support for this type.
 
 =head1 SEE ALSO
 

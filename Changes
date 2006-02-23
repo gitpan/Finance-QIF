@@ -1,5 +1,9 @@
 Revision history for Perl extension Finance::QIF.
 
+2.00  Mon Feb 22 15:45:00 2006
+	- Initial 2.0 release of Finance::QIF this version supports all know
+          QIF record types and values. The API's have changed since 1.X.
+
 2.00B Mon Jan 26 19:14:00 2006
 	- Beta version of Finance::QIF that should be able to read and
           write exports from Quicken.

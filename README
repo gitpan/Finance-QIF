@@ -30,16 +30,20 @@ it under the same terms as Perl itself.
 
 COMMENTS
 
-We have put together a new version of FInance::QIF. I was looking for something that could process a complete export from Quicken. I took a look at the original Finance::QIF currently available at CPAN and found it could not process much of a typical Quicken QIF file. This new beta version of Finance::QIF is fairly different from the existing FInance::QIF. We have contacted the previous owner and asked for permission to take ownership of the existing Finance::QIF. They agreed to let us pick up the code.
+We have put together a new version of FInance::QIF. I was looking for
+something that could process a complete export from Quicken. I took a
+look at the original Finance::QIF currently available at CPAN and
+found it could not process much of a typical Quicken QIF file. This
+new version of Finance::QIF is fairly different from the existing
+Finance::QIF. We have contacted the previous owner and asked for
+permission to take ownership of the existing Finance::QIF. They agreed
+to let us pick up the code.
 
-What we are currently looking for is feedback from existing users of Finance::QIF on how important it is for us to maintain backwards compatibility. We could devote some time to layering the existing Finance::QIF API's on top of the new core file reader/writer so that any existing code should work with out modifications. However those API's may still be fairly limited in what they might support when compared to the current set of API's.
+This version does have different API's than the 1.X so anyone porting code
+to this new version will have to make modifications to get things working.
 
-The  software we  have is in beta and available at http://sourceforge.net/projects/finance-qif
-
-Keep in mind this  is still Beta and all though it has worked well for my purposes I'm not real confident that the produced QIF files through the writes are 100% accepted by imports back into Quicken. So I wouldn't go trying an import on a critical Quicken file. I also know that Quicken produces some flags for Payee's that my code doesn't know what to do with because I have not found any documentation that tells me what the flags represent.
-
-For those interested, take a look at the beta release of what we have and if we get enough direction to spend time on backwards compatibility we will.  We are also debating adding support for returning objects rather than hashes. Again strong feelings one way or the other on this would help sway us.
+The software is available at
+http://sourceforge.net/projects/finance-qif
 
 Regards,
-Matthew McGillis
-
+Matthew McGillis & Phil Lobbes

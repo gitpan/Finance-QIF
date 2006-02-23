@@ -1,4 +1,4 @@
-use Test::More tests => 851;
+use Test::More tests => 853;
 
 BEGIN {
 
@@ -10,13 +10,20 @@ BEGIN {
 }
 
 testfile( "Read ", "t/test.qif" );
-my $in  = Finance::QIF->new( file => "t/test.qif" );
-my $out = Finance::QIF->new( file => ">t/write.qif" );
+my $in  = Finance::QIF->new( file                    => "t/test.qif", 
+                             input_record_separator  => "\n" );
+binmode $in->_filehandle;
+my $out = Finance::QIF->new( file                    => ">t/write.qif",
+                             output_record_separator => "\n" );
+binmode $out->_filehandle;
 
-# need to find appropriate way to test missing defiend fields that
-# this test currently correctly generates since Y is not supported.
-# for now just hide this warning
+# Trap warning so we can validate message returned.
 $DOWARN = 0;
+# need to create a test that intentionally causes a warning so we can validate
+# warnings are always working properly 
+# turn warnings back on
+$DOWARN = 1;
+
 my $header = "";
 while ( my $record = $in->next() ) {
     if ( $header ne $record->{header} ) {
@@ -26,8 +33,6 @@ while ( my $record = $in->next() ) {
     $out->write($record);
 }
 
-# turn warnings back on
-$DOWARN = 1;
 $in->close();
 $out->close();
 testfile( "Write ", "t/write.qif" );
@@ -38,7 +43,9 @@ testfile( "Write ", "t/write.qif" );
 sub testfile {
     my $test = shift;
     my $file = shift;
-    my $qif  = Finance::QIF->new( file => $file );
+    my $qif  = Finance::QIF->new( file                   => $file,
+                                  input_record_separator => "\n" );
+    binmode $qif->_filehandle();
 
     # account tests
     {
@@ -117,18 +124,14 @@ sub testfile {
     # payee tests
     {
 
-        # need to find appropriate way to test missing defiend fields that
-        # this test currently correctly generates since Y is not supported.
-        # for now just hide this by dumping errors to /dev/null
-        $DOWARN = 0;
         my $record = $qif->next();
-        $DOWARN = 1;
         ok( $record->{header}  eq "Type:Payee",          $test . "Payee" );
         ok( $record->{name}    eq "Safeway",             $test . "Payee" );
         ok( $record->{address} eq "Safeway Address\n\n", $test . "Payee" );
         ok( $record->{city}    eq "City",                $test . "Payee" );
         ok( $record->{state}   eq "SC",                  $test . "Payee" );
         ok( $record->{zip}     eq "99999     ",          $test . "Payee" );
+        ok( $record->{country} eq "",                    $test . "Payee" );
         ok( $record->{phone}   eq "3333333333",          $test . "Payee" );
         ok( $record->{account} eq "123456789",           $test . "Payee" );
     }
