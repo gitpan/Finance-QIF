@@ -1,7 +1,11 @@
 use Finance::QIF;
 
-my $in=Finance::QIF->new(file=>$ARGV[0]);
-my $out=Finance::QIF->new(file=>">write.qif");
+my $in=Finance::QIF->new(file                   => $ARGV[0],
+                         input_record_separator => "\n" );
+
+my $out=Finance::QIF->new(file                   => ">write.qif",
+                          input_record_separator => "\n" );
+
 
 my $header="";
 while (my $record=$in->next()) {

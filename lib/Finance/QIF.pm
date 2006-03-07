@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use IO::File;
 
-our $VERSION = '2.00';
+our $VERSION = '2.01';
 $VERSION = eval $VERSION;
 
 my %noninvestment = (
@@ -153,8 +153,8 @@ sub new {
 
     $self->{debug}                   ||= 0;
     $self->{file}                    ||= "";
-    $self->{output_record_separator} ||= $\;
     $self->{input_record_separator}  ||= $/;
+    $self->{output_record_separator} ||= $\;
     $self->{linecount} = 0;
 
     map( $self->{$_} = undef,    # initialize internally used variables
@@ -282,7 +282,12 @@ sub next {
             }
         }
     }
-    return \%object;
+    # Must check that we have a valid record to return
+    if (scalar(keys %object) > 1) {
+      return \%object;
+    } else {
+      return undef;
+    }
 }
 
 sub _parseline {
@@ -1060,17 +1065,6 @@ For output files must include ">" with file name.
 
   my $out = Finance::QIF->new( file => ">myfile" );
 
-=item output_record_separator
-
-Can be used to redefine the QIF output record separator.
-
-  my $out = Finance::QIF->new( output_record_separator => "\n" );
-
-Note: For MacOS X it will most likely be necessary to change this to
-"\r". Quicken on MacOS X generates files with "\r" as the seperator
-which is typical of Mac however the native perl in MacOS X is unix
-based and uses the default unix seperator which is "\n".
-
 =item input_record_separator
 
 Can be used to redefine the QIF input record separator.
@@ -1078,9 +1072,20 @@ Can be used to redefine the QIF input record separator.
   my $in = Finance::QIF->new( input_record_separator => "\n" );
 
 Note: For MacOS X it will most likely be necessary to change this to
-"\r". Quicken on MacOS X generates files with "\r" as the seperator
+"\r". Quicken on MacOS X generates files with "\r" as the separator
 which is typical of Mac however the native perl in MacOS X is unix
-based and uses the default unix seperator which is "\n".
+based and uses the default unix separator which is "\n".
+
+=item output_record_separator
+
+Can be used to redefine the QIF output record separator.
+
+  my $out = Finance::QIF->new( output_record_separator => "\n" );
+
+Note: For MacOS X it will most likely be necessary to change this to
+"\r". Quicken on MacOS X generates files with "\r" as the separator
+which is typical of Mac however the native perl in MacOS X is unix
+based and uses the default unix separator which is "\n".
 
 =item debug
 

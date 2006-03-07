@@ -1,6 +1,7 @@
 use Finance::QIF;
 
-my $qif=Finance::QIF->new(file=>$ARGV[0]);
+my $qif=Finance::QIF->new(file                    => $ARGV[0],
+                          input_record_separator  => "\n" );
 
 while (my $record=$qif->next()) {
   print "Header: ".$record->{header}."\n";

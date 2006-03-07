@@ -1,5 +1,9 @@
 Revision history for Perl extension Finance::QIF.
 
+2.01  Mon Mar 3 15:25:00 2006
+	- Fixed bug that returned empty record in some cases.
+	- Fixed a few typos in documentation.
+
 2.00  Mon Feb 22 15:45:00 2006
 	- Initial 2.0 release of Finance::QIF this version supports all know
           QIF record types and values. The API's have changed since 1.X.
