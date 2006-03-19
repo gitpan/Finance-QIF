@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use IO::File;
 
-our $VERSION = '2.01';
+our $VERSION = '2.02';
 $VERSION = eval $VERSION;
 
 my %noninvestment = (
@@ -206,6 +206,7 @@ sub next {
     my $self = shift;
     my %object;
     my $continue = 1;
+    my $csplit;    # Need to keep track of current split for adding split values
     if ( $self->_filehandle->eof ) {
         return undef;
     }
@@ -228,7 +229,15 @@ sub next {
                 $continue = 0;
             }
             else {
-                if ( !exists( $header{ $object{header} } ) ) {
+                if (
+                    !exists( $header{ $object{header} } )
+                    && !(
+                        exists( $header{"split"} )
+                        && (   $object{header} eq "noninvestment"
+                            || $object{header} eq "memorized" )
+                    )
+                  )
+                {
                     $self->_warning(
                         "Unknown header '$object{header}' can't process line");
                 }
@@ -260,13 +269,20 @@ sub next {
                 elsif ($field eq 'S'
                     && $header{ $object{header} }{$field} eq "splits" )
                 {
-                    my %mys;
-                    $mys{ $split{$field} } = $value;
-                    ( $field, $value ) = $self->_parseline( $self->_getline );
-                    $mys{ $split{$field} } = $value;
-                    ( $field, $value ) = $self->_parseline( $self->_getline );
-                    $mys{ $split{$field} } = $value;
-                    push( @{ $object{splits} }, \%mys );
+                    my %mysplit;    # We assume "S" always appears first
+                    $mysplit{ $split{$field} } = $value;
+                    push( @{ $object{splits} }, \%mysplit );
+                    $csplit = \%mysplit;
+                }
+                elsif (
+                    ( $field eq 'E' || $field eq '$' )
+                    && (   \%{ $header{ $object{header} } } == \%noninvestment
+                        || \%{ $header{ $object{header} } } == \%memorized )
+                  )
+                {
+
+                    # this currently assumes the "S" was found first
+                    $csplit->{ $split{$field} } = $value;
                 }
                 elsif ($field eq 'B'
                     && $header{ $object{header} }{$field} eq "budget" )
@@ -282,11 +298,13 @@ sub next {
             }
         }
     }
+
     # Must check that we have a valid record to return
-    if (scalar(keys %object) > 1) {
-      return \%object;
-    } else {
-      return undef;
+    if ( scalar( keys %object ) > 1 ) {
+        return \%object;
+    }
+    else {
+        return undef;
     }
 }
 
@@ -452,10 +470,6 @@ sub write {
                         if ( exists( $s->{$key} ) ) {
                             $self->_writeline( $self->{reversesplitsmap}{$key},
                                 $s->{$key} );
-                        }
-                        else {
-                            $self->_writeline(
-                                $self->{reversesplitsmap}{$key} );
                         }
                     }
                 }

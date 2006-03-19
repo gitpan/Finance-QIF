@@ -1,5 +1,8 @@
 Revision history for Perl extension Finance::QIF.
 
+2.02  Mon Mar 19 13:06:00 2006
+	- Fixed [rt.cpan.org #18246] Splits don't always have memo fields.
+
 2.01  Mon Mar 3 15:25:00 2006
 	- Fixed bug that returned empty record in some cases.
 	- Fixed a few typos in documentation.

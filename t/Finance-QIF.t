@@ -1,4 +1,4 @@
-use Test::More tests => 853;
+use Test::More tests => 851;
 
 BEGIN {
 
@@ -234,7 +234,6 @@ sub testfile {
         ok( $record->{splits}[1]{amount} eq "-250.00", $test . "Bank" );
         ok( $record->{splits}[2]{category} eq "Payroll Taxes, Self:Soc Sec",
             $test . "Bank" );
-        ok( $record->{splits}[2]{memo}   eq "",       $test . "Bank" );
         ok( $record->{splits}[2]{amount} eq "-50.00", $test . "Bank" );
         ok( $record->{splits}[3]{category} eq "Payroll Taxes, Self:Medicare",
             $test . "Bank" );
