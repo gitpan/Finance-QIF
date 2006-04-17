@@ -6,12 +6,14 @@ use warnings;
 use Carp;
 use IO::File;
 
-our $VERSION = '2.02';
+our $VERSION = '2.03';
 $VERSION = eval $VERSION;
 
 my %noninvestment = (
     "D" => "date",
     "T" => "amount",
+    "U" => "total",     #Quicken 2005 added this which is usually the same as
+                        #as T but can sometimes be higher.
     "C" => "status",
     "N" => "number",
     "P" => "payee",
@@ -34,6 +36,8 @@ my %investment = (
     "I" => "price",
     "Q" => "quantity",
     "T" => "transaction",
+    "U" => "total",     #Quicken 2005 added this which is usually the same as
+                        #as T but can sometimes be higher.
     "C" => "status",
     "P" => "text",
     "M" => "memo",
@@ -155,6 +159,7 @@ sub new {
     $self->{file}                    ||= "";
     $self->{input_record_separator}  ||= $/;
     $self->{output_record_separator} ||= $\;
+    $self->{trim_white_space}        ||= 0;
     $self->{linecount} = 0;
 
     map( $self->{$_} = undef,    # initialize internally used variables
@@ -330,6 +335,10 @@ sub _parseline {
     else {
         $result[0] = substr( $line, 0, 1 );
         $result[1] = substr( $line, 1 );
+        if ($self->{trim_white_space})
+        {
+          $result[1]=~s/^\s*(.*?)\s*$/$1/;
+        }
     }
     return @result;
 }
@@ -609,6 +618,10 @@ Date of transaction.
 
 Dollar amount of transaction.
 
+=item total
+
+Dollar amount of transaction. This is gnerally the same as amount but in some cases can be higher. (Introduced in Quicken 2005 for windows)
+
 =item status
 
 Reconciliation status of transaction.
@@ -711,6 +724,10 @@ Account related to security specific transaction.
 =item amount
 
 Dollar amount of transaction.
+
+=item total
+
+Dollar amount of transaction. This is gnerally the same as amount but in some cases can be higher. (Introduced in Quicken 2005 for windows)
 
 =back
 
@@ -1100,6 +1117,12 @@ Note: For MacOS X it will most likely be necessary to change this to
 "\r". Quicken on MacOS X generates files with "\r" as the separator
 which is typical of Mac however the native perl in MacOS X is unix
 based and uses the default unix separator which is "\n".
+
+=item trim_white_space
+
+Can be used to remove leading and trailing white space from values returned. Default is "0".
+
+  my $qif = Finance::QIF->new( trim_white_space => 1 );
 
 =item debug
 

@@ -1,4 +1,4 @@
-use Test::More tests => 851;
+use Test::More tests => 883;
 
 BEGIN {
 
@@ -262,6 +262,26 @@ sub testfile {
         ok( $record->{splits}[1]{category} eq "Misc",      $test . "Bank" );
         ok( $record->{splits}[1]{memo}     eq "",          $test . "Bank" );
         ok( $record->{splits}[1]{amount}   eq "-25.00",    $test . "Bank" );
+        $record = $qif->next();
+        ok( $record->{header}   eq "Type:Bank", $test . "Bank" );
+        ok( $record->{date}     eq "3/17/06",   $test . "Bank" );
+        ok( $record->{payee}    eq "Safeway",   $test . "Bank" );
+        ok( $record->{memo}     eq "",          $test . "Bank" );
+        ok( $record->{amount}   eq "-100.00",   $test . "Bank" );
+        ok( $record->{total}    eq "-100.00",   $test . "Bank" );
+        ok( $record->{address}  eq "",          $test . "Bank" );
+        ok( $record->{category} eq "Groceries", $test . "Bank" );
+        $qif->{trim_white_space}=1;
+        $record = $qif->next();
+        ok( $record->{header}   eq "Type:Bank", $test . "Bank" );
+        ok( $record->{date}     eq "3/17/06",   $test . "Bank" );
+        ok( $record->{payee}    eq "QFC",       $test . "Bank" );
+        ok( $record->{memo}     eq "",          $test . "Bank" );
+        ok( $record->{amount}   eq "-100.00",   $test . "Bank" );
+        ok( $record->{total}    eq "-100.00",   $test . "Bank" );
+        ok( $record->{address}  eq "",          $test . "Bank" );
+        ok( $record->{category} eq "Groceries", $test . "Bank" );
+        $qif->{trim_white_space}=0;
     }
 
     # Cash test
