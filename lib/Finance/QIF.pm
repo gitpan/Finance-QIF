@@ -6,14 +6,14 @@ use warnings;
 use Carp;
 use IO::File;
 
-our $VERSION = '2.03';
+our $VERSION = '2.04';
 $VERSION = eval $VERSION;
 
 my %noninvestment = (
     "D" => "date",
     "T" => "amount",
-    "U" => "total",     #Quicken 2005 added this which is usually the same as
-                        #as T but can sometimes be higher.
+    "U" => "total",      #Quicken 2005 added this which is usually the same as
+                         #as T but can sometimes be higher.
     "C" => "status",
     "N" => "number",
     "P" => "payee",
@@ -36,8 +36,8 @@ my %investment = (
     "I" => "price",
     "Q" => "quantity",
     "T" => "transaction",
-    "U" => "total",     #Quicken 2005 added this which is usually the same as
-                        #as T but can sometimes be higher.
+    "U" => "total",        #Quicken 2005 added this which is usually the same as
+                           #as T but can sometimes be higher.
     "C" => "status",
     "P" => "text",
     "M" => "memo",
@@ -153,21 +153,21 @@ my %header = (
 
 sub new {
     my $class = shift;
-    my $self  = {@_};
+    my %opt   = @_;
+    my $self  = {};
 
-    $self->{debug}                   ||= 0;
-    $self->{file}                    ||= "";
-    $self->{input_record_separator}  ||= $/;
-    $self->{output_record_separator} ||= $\;
-    $self->{trim_white_space}        ||= 0;
-    $self->{linecount} = 0;
+    $self->{debug}            = $opt{debug}            || 0;
+    $self->{autodetect}       = $opt{autodetect}       || 0;
+    $self->{trim_white_space} = $opt{trim_white_space} || 0;
+    $self->{record_separator} = $opt{record_separator}
+      || $opt{input_record_separator}
+      || $opt{output_record_separator}
+      || $/;
 
-    map( $self->{$_} = undef,    # initialize internally used variables
-        qw(_filehandle header currentheader reversemap reversesplitsmap) );
     bless( $self, $class );
 
-    if ( $self->{file} ) {
-        print( "File name: ", $self->{file}, "\n" ) if ( $self->{debug} );
+    if ( $opt{file} ) {
+        $self->file( $opt{file} );
         $self->open;
     }
     return $self;
@@ -175,18 +175,30 @@ sub new {
 
 sub file {
     my $self = shift;
-    if ( $_[0] ) {
-        $self->{file} = shift;
+    if (@_) {
+        my @file = ( ref( $_[0] ) eq "ARRAY" ? @{ shift @_ } : (), @_ );
+        $self->{file} = [@file];
     }
-    return $self->{file};
+    if ( $self->{file} ) {
+        return wantarray ? @{ $self->{file} } : $self->{file}->[0];
+    }
+    else {
+        return undef;
+    }
+}
+
+sub record_separator {
+    my $self = shift;
+    return $self->{record_separator};
 }
 
 sub _filehandle {
     my $self = shift;
-    if ( $_[0] ) {
-        my $file = shift;
-        $self->{_filehandle} = IO::File->new($file)
-          or croak("Failed to open file '$file': $!");
+    if (@_) {
+        my @args = @_;
+        $self->{_filehandle} = IO::File->new(@args)
+          or croak("Failed to open file '$args[0]': $!");
+        $self->{_linecount} = 0;
     }
     if ( !$self->{_filehandle} ) {
         croak("No filehandle available");
@@ -196,14 +208,30 @@ sub _filehandle {
 
 sub open {
     my $self = shift;
-    if ( $_[0] ) {
-        $self->file(shift);
+    if (@_) {
+        $self->file(@_);
     }
     if ( $self->file ) {
         $self->_filehandle( $self->file );
+        if ( $self->{autodetect} ) {
+            if ( $self->_filehandle->seek( -2, 2 ) ) {
+                my $buffer = "";
+                $self->_filehandle->read( $buffer, 2 );
+                if ( $buffer eq "\r\n" ) {
+                    $self->{record_separator} = "\r\n";
+                }
+                elsif ( $buffer =~ /\n$/ ) {
+                    $self->{record_separator} = "\n";
+                }
+                elsif ( $buffer =~ /\r$/ ) {
+                    $self->{record_separator} = "\r";
+                }
+            }
+        }
+        $self->reset();
     }
     else {
-        croak "No file specified.";
+        croak("No file specified");
     }
 }
 
@@ -226,7 +254,7 @@ sub next {
             $self->{header} = $value;
             $object{header} = $value;
             if ( !exists( $header{$value} ) ) {
-                $self->_warning( 'Unknown header format "' . $value . '"' );
+                $self->_warning("Unknown header format '$value'");
             }
         }
         else {
@@ -298,7 +326,7 @@ sub next {
                     $object{ $header{ $object{header} }{$field} } = $value;
                 }
                 else {
-                    $self->_warning( 'Unknown field "' . $field . '"' );
+                    $self->_warning("Unknown field '$field'");
                 }
             }
         }
@@ -335,9 +363,8 @@ sub _parseline {
     else {
         $result[0] = substr( $line, 0, 1 );
         $result[1] = substr( $line, 1 );
-        if ($self->{trim_white_space})
-        {
-          $result[1]=~s/^\s*(.*?)\s*$/$1/;
+        if ( $self->{trim_white_space} ) {
+            $result[1] =~ s/^\s*(.*?)\s*$/$1/;
         }
     }
     return @result;
@@ -345,10 +372,10 @@ sub _parseline {
 
 sub _getline {
     my $self = shift;
-    local $/ = $self->{input_record_separator};
+    local $/ = $self->{record_separator};
     my $line = $self->_filehandle->getline;
     chomp($line);
-    $self->{linecount}++;
+    $self->{_linecount}++;
     return $line;
 }
 
@@ -356,17 +383,17 @@ sub _warning {
     my $self    = shift;
     my $message = shift;
     carp(   $message
-          . ' in file "'
+          . " in file '"
           . $self->file
-          . '" line '
-          . $self->{linecount} );
+          . "' line "
+          . $self->{_linecount} );
 }
 
 sub header {
     my $self   = shift;
     my $header = shift;
     my $fh     = $self->_filehandle;
-    local $\ = $self->{output_record_separator};
+    local $\ = $self->{record_separator};
     print( $fh "!", $header );
 
     # used during write to validate passed record is appropriate for
@@ -382,9 +409,9 @@ sub header {
         }
     }
 
-    $self->{linecount}++;
+    $self->{_linecount}++;
     if ( !exists( $header{$header} ) ) {
-        $self->_warning( 'Unsuppored header "' . $header . '" writen to file' );
+        $self->_warning("Unsupported header '$header' written to file");
     }
 }
 
@@ -412,13 +439,13 @@ sub write {
                         );
                     }
                     else {
-                        $self->_warning('Prices missing a required field');
+                        $self->_warning("Prices missing a required field");
                     }
                 }
                 $self->_writeline("^");
             }
             else {
-                $self->_warning('Record missing "symbol" or "prices"');
+                $self->_warning("Record missing 'symbol' or 'prices'");
             }
         }
         else {
@@ -469,8 +496,8 @@ sub write {
                     }
                 }
                 else {
-                    $self->_warning( 'Unsupported field "' . $value
-                          . '" found in record ignored' );
+                    $self->_warning( "Unsupported field '$value'"
+                          . " found in record ignored" );
                 }
             }
             if ( exists( $record->{splits} ) ) {
@@ -493,36 +520,33 @@ sub write {
         }
     }
     else {
-        $self->_warning( 'Record header type "'
+        $self->_warning( "Record header type '"
               . $record->{header}
-              . '" does not match current output header type '
+              . "' does not match current output header type "
               . $self->{currentheader}
-              . '.' );
+              . "." );
     }
 }
 
 sub _writeline {
     my $self = shift;
     my $fh   = $self->_filehandle;
-    local $\ = $self->{output_record_separator};
+    local $\ = $self->{record_separator};
     print( $fh @_ );
-    $self->{linecount}++;
+    $self->{_linecount}++;
 }
 
 sub reset {
     my $self = shift;
+    map( $self->{$_} = undef,    # initialize internally used variables
+        qw(_linecount header currentheader reversemap reversesplitsmap)
+    );
     $self->_filehandle->seek( 0, 0 );
-    $self->next;
 }
 
 sub close {
     my $self = shift;
     $self->_filehandle->close;
-}
-
-sub DESTROY {
-    my $self = shift;
-    $self->close;
 }
 
 1;
@@ -620,7 +644,8 @@ Dollar amount of transaction.
 
 =item total
 
-Dollar amount of transaction. This is gnerally the same as amount but in some cases can be higher. (Introduced in Quicken 2005 for windows)
+Dollar amount of transaction. This is generally the same as amount but
+in some cases can be higher. (Introduced in Quicken 2005 for windows)
 
 =item status
 
@@ -727,7 +752,8 @@ Dollar amount of transaction.
 
 =item total
 
-Dollar amount of transaction. This is gnerally the same as amount but in some cases can be higher. (Introduced in Quicken 2005 for windows)
+Dollar amount of transaction. This is generally the same as amount but
+in some cases can be higher. (Introduced in Quicken 2005 for windows)
 
 =back
 
@@ -1088,39 +1114,66 @@ If the file is specified it will be opened on new.
 
 =item file
 
-Specifies file to use for processing.
+Specifies file to use for processing.  See L</file()> for details.
 
   my $in = Finance::QIF->new( file => "myfile" );
+OR
+  my $in = Finance::QIF->new( file => [ "myfile", "<:crlf" ] );
 
-For output files must include ">" with file name.
+For output files, be sure to open the file in write mode.  For example:
 
   my $out = Finance::QIF->new( file => ">myfile" );
 
-=item input_record_separator
+=item record_separator
 
-Can be used to redefine the QIF input record separator.
+Can be used to redefine the QIF record separator.  Default is $/.
 
-  my $in = Finance::QIF->new( input_record_separator => "\n" );
+  my $in = Finance::QIF->new( record_separator => "\n" );
 
 Note: For MacOS X it will most likely be necessary to change this to
 "\r". Quicken on MacOS X generates files with "\r" as the separator
 which is typical of Mac however the native perl in MacOS X is unix
-based and uses the default unix separator which is "\n".
+based and uses the default unix separator which is "\n". See L</auto_detect> for another option.
+
+=item input_record_separator
+
+DEPRECIATED use record_separator will not be supported next release.
 
 =item output_record_separator
 
-Can be used to redefine the QIF output record separator.
+DEPRECIATED use record_separator will not be supported next release.
 
-  my $out = Finance::QIF->new( output_record_separator => "\n" );
+=item auto_detect
 
-Note: For MacOS X it will most likely be necessary to change this to
-"\r". Quicken on MacOS X generates files with "\r" as the separator
-which is typical of Mac however the native perl in MacOS X is unix
-based and uses the default unix separator which is "\n".
+Enable auto detection of the record separator based on the file
+contents. Default is "0".
+
+  my $in = Finance::QIF->new( auto_detect => 1 );
+
+Perl uses $/ to define line separators for text files. Perl sets this
+value according to the OS perl is running on:
+
+  Windows="\r\n"
+  Mac="\r"
+  Unix="\n"
+
+In many cases you may find yourself with text files that do not match
+the OS.  In these cases Finance::QIF by default will not process that
+QIF file correctly. This feature is an attempt to help with the most
+common cases of having the wrong text file for the OS Finance::QIF is
+running on.
+
+This feature depends on being able to seek to the end of the file and
+reading the last 2 characters to determine the proper separator. If a
+seek can not be performed or the last 2 characters are not a proper
+separator the record_separator will default to $/ or the value passed
+in. If a valid record_separator is found then it will be set according
+to what was in the file.
 
 =item trim_white_space
 
-Can be used to remove leading and trailing white space from values returned. Default is "0".
+Can be used to remove leading and trailing white space from values
+returned. Default is "0".
 
   my $qif = Finance::QIF->new( trim_white_space => 1 );
 
@@ -1134,10 +1187,28 @@ Can be used to output debug information.  Default is "0".
 
 =head2 file()
 
-Specify file name to use.  For output files must include ">" with
-name.
+Specify file name and optionally additional parameters that will be
+used to obtain a filehandle.  The argument can be a filename (SCALAR)
+an ARRAY reference or an ARRAY whose values must be valid arguments
+for passing to IO::File->new.
 
-  $qif->file("myfile");
+  $qif->file( "myfile" );
+ OR
+  $qif->file( [ "myfile", "<:crlf" ] );
+ OR
+  $qif->file( "myfile", "<:crlf" );
+
+For output files, be sure to open the file in write mode.
+
+=head2 record_separator()
+
+Returns the currently used record_separator. This is used primarly in
+situations where you open a QIF file with autodetect and then want to
+write out a QIF file in the same format.
+
+  my $in  = Finance::QIF->new( file => "input.qif", autodetect => 1 );
+  my $out = Finance::QIF->new( file => ">write.qif",
+                               record_separator => $in->record_separator() );
 
 =head2 open()
 
@@ -1145,9 +1216,7 @@ Open already specified file.
 
   $qif->open();
 
-Opens specified file.
-
-  $qif->open("myfile");
+Open also supports the same arguments as L</file()>.
 
 =head2 next()
 
@@ -1162,7 +1231,7 @@ Returns null if no more records are available.
 For output files use to output the passed header for records that will
 then be written with write.
 
-  $out->header("Type:Bank");
+  $out->header( "Type:Bank" );
 
 See L<RECORD TYPES & VALUES> for list of possible record types that
 can be passed.
@@ -1171,7 +1240,7 @@ can be passed.
 
 For output files use to output the passed record to the file.
 
-  $out->write($record);
+  $out->write( $record );
 
 =head2 reset()
 

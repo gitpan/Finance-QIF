@@ -1,4 +1,12 @@
-use Test::More tests => 883;
+#!/usr/bin/perl
+# Before `make install' is performed this script should be runnable with
+# `make test'. After `make install' it should work as `perl Finance-IIF.t'
+
+use strict;
+use warnings;
+use Test::More tests => 930;
+
+my $DOWARN;
 
 BEGIN {
 
@@ -6,21 +14,196 @@ BEGIN {
         $SIG{"__WARN__"} = sub { warn $_[0] if $DOWARN }
     }
     $DOWARN = 1;
-    use_ok('Finance::QIF');
+    use_ok('Finance::QIF') or exit;
 }
 
-testfile( "Read ", "t/test.qif" );
-my $in  = Finance::QIF->new( file                    => "t/test.qif", 
-                             input_record_separator  => "\n" );
+my $package  = "Finance::QIF";
+my $testfile = "t/test.qif";
+my $tempfile = "t/temp.qif";
+
+{    # new
+    can_ok( $package, qw(new) );
+
+    my $obj = $package->new;
+    isa_ok( $obj, $package );
+    is( $obj->{debug},            0,  "default debug value" );
+    is( $obj->{autodetect},       0,  "default autodetect value" );
+    is( $obj->{trim_white_space}, 0,  "default trim_white_space value" );
+    is( $obj->record_separator(), $/, "default record separator" );
+
+    $obj = $package->new(
+        debug            => 1,
+        record_separator => "X\rX\n"
+    );
+    is( $obj->{debug}, 1, "custom debug value" );
+    is( $obj->record_separator(), "X\rX\n", "custom record separator" );
+
+    $obj = $package->new( input_record_separator => "X\rX\n" );
+    is( $obj->record_separator(), "X\rX\n", "custom input record separator" );
+
+    $obj = $package->new( output_record_separator => "X\rX\n" );
+    is( $obj->record_separator(), "X\rX\n", "custom output record separator" );
+}
+
+{    # autodetect
+
+    my $temp = IO::File->new( ">" . $tempfile );
+    $temp->close();
+    my $obj = $package->new( file => $tempfile, autodetect => 1 );
+    is( $obj->record_separator(), $/, "autodetect default record separator" );
+
+    $temp = IO::File->new( ">" . $tempfile );
+    print( $temp "Testing Windows\r\n" );
+    $temp->close();
+    $obj = $package->new( file => $tempfile, autodetect => 1 );
+    is( $obj->record_separator(),
+        "\r\n", "autodetect windows record separator" );
+
+    $temp = IO::File->new( ">" . $tempfile );
+    print( $temp "Testing Mac\r" );
+    $temp->close();
+    $obj = $package->new( file => $tempfile, autodetect => 1 );
+    is( $obj->record_separator(), "\r", "autodetect mac record separator" );
+
+    $temp = IO::File->new( ">" . $tempfile );
+    print( $temp "Testing Unix\n" );
+    $temp->close();
+    $obj = $package->new( file => $tempfile, autodetect => 1 );
+    is( $obj->record_separator(), "\n", "autodetect unix record separator" );
+
+    unlink($tempfile);
+}
+
+{    # trim_white_space
+
+    my $temp = IO::File->new( ">" . $tempfile );
+    print( $temp
+          "!Type:Security\nNIntuit \nS INTU\nT Stock \nGHigh Risk\n^\n" );
+    $temp->close();
+
+    my $obj = $package->new( file => $tempfile, autodetect => 1 );
+    ok( $obj->{trim_white_space} == 0, "trim_white_space not set" );
+    my $record = $obj->next();
+
+    ok( $record->{security} eq "Intuit ", "trim_white_space trailing" );
+    ok( $record->{symbol}   eq " INTU",   "trim_white_space leading" );
+    ok( $record->{type}     eq " Stock ", "trim_white_space both" );
+
+    $obj = $package->new(
+        file             => $tempfile,
+        autodetect       => 1,
+        trim_white_space => 1
+    );
+    ok( $obj->{trim_white_space} == 1, "trim_white_space set" );
+    $record = $obj->next();
+
+    ok( $record->{security} eq "Intuit", "trim_white_space trailing" );
+    ok( $record->{symbol}   eq "INTU",   "trim_white_space leading" );
+    ok( $record->{type}     eq "Stock",  "trim_white_space both" );
+
+    unlink($tempfile);
+}
+
+{    # reset
+    can_ok( $package, qw(reset) );
+
+    my $obj = $package->new;
+    eval { $obj->reset };
+    like(
+        $@,
+        qr/^No filehandle available/,
+        "reset without a filehandle croaks"
+    );
+
+    my $temp = IO::File->new( ">" . $tempfile );
+    print( $temp "!Type:Security\nNIntuit\nSINTU\nTStock\nGHigh Risk\n^\n" );
+    $temp->close();
+
+    $obj = $package->new( file => $tempfile, autodetect => 1 );
+    my $record1 = $obj->next();
+    $obj->reset();
+    my $record2 = $obj->next();
+
+    ok(
+        $record1->{header}        eq $record2->{header}
+          && $record1->{security} eq $record2->{security}
+          && $record1->{symbol}   eq $record2->{symbol}
+          && $record1->{type}     eq $record2->{type}
+          && $record1->{goal}     eq $record2->{goal},
+        "reset reads same record"
+    );
+}
+
+{    # file
+    can_ok( $package, qw(file) );
+
+    my $obj = $package->new;
+
+    is( $obj->file, undef, "file undef by default" );
+    is( $obj->file($testfile), $testfile, "file with one arg" );
+    is( $obj->file( $testfile, "<" ), $testfile, "file with two args" );
+
+    $obj = $package->new( file => $testfile );
+    is( $obj->file, $testfile, "new with scalar file argument" );
+
+    $obj = $package->new( file => [ $testfile, "<:crlf" ] );
+    is( $obj->file, $testfile, "new with arrayref file argument" );
+
+    is_deeply( [ $obj->file( 1, 2 ) ], [ 1, 2 ], "file returns list" );
+}
+
+{    # croak checks for: _filehandle next _getline close
+    my @methods = qw(_filehandle next _getline close);
+    can_ok( $package, @methods );
+
+    foreach my $method (@methods) {
+        my $obj = $package->new;
+        eval { $obj->$method };
+        like(
+            $@,
+            qr/^No filehandle available/,
+            "$method without a filehandle croaks"
+        );
+    }
+}
+
+{    # open
+    can_ok( $package, qw(open) );
+
+    my $obj = $package->new;
+    eval { $obj->open };
+    like( $@, qr/^No file specified/, "open without a file croaks" );
+
+    $obj = $package->new;
+    eval { $obj->open($testfile) };
+    is( $@, "", "open with file works" );
+}
+
+{    # _parseline
+    can_ok( $package, qw(_parseline) );
+}
+
+{    # _warning
+    can_ok( $package, qw(_warning) );
+}
+
+testfile( "Read ", $testfile );
+my $in = $package->new(
+    file       => $testfile,
+    autodetect => 1
+);
 binmode $in->_filehandle;
-my $out = Finance::QIF->new( file                    => ">t/write.qif",
-                             output_record_separator => "\n" );
+my $out = $package->new(
+    file             => ">" . $tempfile,
+    record_separator => $in->record_separator
+);
 binmode $out->_filehandle;
 
 # Trap warning so we can validate message returned.
 $DOWARN = 0;
+
 # need to create a test that intentionally causes a warning so we can validate
-# warnings are always working properly 
+# warnings are always working properly
 # turn warnings back on
 $DOWARN = 1;
 
@@ -35,16 +218,40 @@ while ( my $record = $in->next() ) {
 
 $in->close();
 $out->close();
-testfile( "Write ", "t/write.qif" );
+testfile( "Write ", $tempfile );
+unlink($tempfile);
+
+#test default write/write works
+$out = $package->new( file => ">" . $tempfile, );
+my $record = {
+    header   => "Type:Security",
+    security => "Intuit",
+    symbol   => "INTU",
+    type     => "Stock",
+    goal     => "High Risk"
+};
+$out->header( $record->{header} );
+$out->write($record);
+$out->close();
+$in = $package->new( file => $tempfile, );
+$record = $in->next();
+ok( $record->{header}   eq "Type:Security", "default write/read" );
+ok( $record->{security} eq "Intuit",        "default write/read" );
+ok( $record->{symbol}   eq "INTU",          "default write/read" );
+ok( $record->{type}     eq "Stock",         "default write/read" );
+ok( $record->{goal}     eq "High Risk",     "default write/read" );
+unlink($tempfile);
 
 # Need a test for confirming we don't interfere with other open files
-# reading input with different line seperator.
+# reading input with different line separator.
 
 sub testfile {
     my $test = shift;
     my $file = shift;
-    my $qif  = Finance::QIF->new( file                   => $file,
-                                  input_record_separator => "\n" );
+    my $qif  = $package->new(
+        file             => $file,
+        record_separator => "\n"
+    );
     binmode $qif->_filehandle();
 
     # account tests
@@ -271,7 +478,7 @@ sub testfile {
         ok( $record->{total}    eq "-100.00",   $test . "Bank" );
         ok( $record->{address}  eq "",          $test . "Bank" );
         ok( $record->{category} eq "Groceries", $test . "Bank" );
-        $qif->{trim_white_space}=1;
+        $qif->{trim_white_space} = 1;
         $record = $qif->next();
         ok( $record->{header}   eq "Type:Bank", $test . "Bank" );
         ok( $record->{date}     eq "3/17/06",   $test . "Bank" );
@@ -281,7 +488,7 @@ sub testfile {
         ok( $record->{total}    eq "-100.00",   $test . "Bank" );
         ok( $record->{address}  eq "",          $test . "Bank" );
         ok( $record->{category} eq "Groceries", $test . "Bank" );
-        $qif->{trim_white_space}=0;
+        $qif->{trim_white_space} = 0;
     }
 
     # Cash test

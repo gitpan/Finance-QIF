@@ -1,5 +1,11 @@
 Revision history for Perl extension Finance::QIF.
 
+2.04  Wed Jul 19 9:00:00 2006
+	- Added autodetect option
+	- Fixed bug that caused wrong separator to be used on output files
+        - Added support for standard file open options
+        - Changed separator support to move to single record_separator
+
 2.03  Mon Apr 17 09:33:00 2006
 	- Added support for "U" in investment and non-investment accounts.
 	- Added support for trim_white_space.
