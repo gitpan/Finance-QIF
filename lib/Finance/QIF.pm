@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use IO::File;
 
-our $VERSION = '2.04';
+our $VERSION = '2.05';
 $VERSION = eval $VERSION;
 
 my %noninvestment = (
@@ -59,6 +59,7 @@ my %account = (
 my %category = (
     "N" => "name",
     "D" => "description",
+    "B" => "budget",
     "E" => "expense",
     "I" => "income",
     "T" => "tax",
@@ -73,6 +74,8 @@ my %class = (
 my %memorized = (
     "K" => "transaction",
     "T" => "amount",
+    "U" => "total",        #Quicken 2005 added this which is usually the same as
+                           #as T but can sometimes be higher.
     "C" => "status",
     "P" => "payee",
     "M" => "memo",
@@ -159,7 +162,7 @@ sub new {
     $self->{debug}            = $opt{debug}            || 0;
     $self->{autodetect}       = $opt{autodetect}       || 0;
     $self->{trim_white_space} = $opt{trim_white_space} || 0;
-    $self->{record_separator} = $opt{record_separator}
+         $self->{record_separator} = $opt{record_separator}
       || $opt{input_record_separator}
       || $opt{output_record_separator}
       || $/;
@@ -251,6 +254,7 @@ sub next {
         next if ( $line =~ /^\s*$/ );
         my ( $field, $value ) = $self->_parseline($line);
         if ( $field eq '!' ) {
+            $value =~ s/\s+$//;    # Headers sometimes have trailing white space
             $self->{header} = $value;
             $object{header} = $value;
             if ( !exists( $header{$value} ) ) {
@@ -372,7 +376,7 @@ sub _parseline {
 
 sub _getline {
     my $self = shift;
-    local $/ = $self->{record_separator};
+    local $/ = $self->record_separator;
     my $line = $self->_filehandle->getline;
     chomp($line);
     $self->{_linecount}++;
@@ -539,8 +543,7 @@ sub _writeline {
 sub reset {
     my $self = shift;
     map( $self->{$_} = undef,    # initialize internally used variables
-        qw(_linecount header currentheader reversemap reversesplitsmap)
-    );
+        qw(_linecount header currentheader reversemap reversesplitsmap) );
     $self->_filehandle->seek( 0, 0 );
 }
 
@@ -815,6 +818,11 @@ Name of category.
 
 Description of category.
 
+=item budget
+
+An array of 12 values Jan-Dec to represent the budget amount for each
+month.
+
 =item expense
 
 Usually exists if the category is an expense account however this is
@@ -867,6 +875,11 @@ payment, "I" for investment, and "E" for electronic payee.
 =item amount
 
 Dollar amount of transaction.
+
+=item total
+
+Dollar amount of transaction. This is generally the same as amount but
+in some cases can be higher. (Introduced in Quicken 2005 for windows)
 
 =item status
 
@@ -998,7 +1011,7 @@ Exists if this category is tax related.
 If this category is tax related this specifies what tax schedule it is
 related if defined.
 
-=item amount
+=item budget
 
 An array of 12 values Jan-Dec to represent the budget amount for each
 month.
@@ -1131,26 +1144,27 @@ Can be used to redefine the QIF record separator.  Default is $/.
   my $in = Finance::QIF->new( record_separator => "\n" );
 
 Note: For MacOS X it will most likely be necessary to change this to
-"\r". Quicken on MacOS X generates files with "\r" as the separator
+"\r".  Quicken on MacOS X generates files with "\r" as the separator
 which is typical of Mac however the native perl in MacOS X is unix
-based and uses the default unix separator which is "\n". See L</auto_detect> for another option.
+based and uses the default unix separator which is "\n".  See
+L</autodetect> for another option.
 
 =item input_record_separator
 
-DEPRECIATED use record_separator will not be supported next release.
+DEPRECATED: use record_separator, this will not be supported next release.
 
 =item output_record_separator
 
-DEPRECIATED use record_separator will not be supported next release.
+DEPRECATED: use record_separator, this will not be supported next release.
 
-=item auto_detect
+=item autodetect
 
 Enable auto detection of the record separator based on the file
-contents. Default is "0".
+contents.  Default is "0".
 
-  my $in = Finance::QIF->new( auto_detect => 1 );
+  my $in = Finance::QIF->new( autodetect => 1 );
 
-Perl uses $/ to define line separators for text files. Perl sets this
+Perl uses $/ to define line separators for text files.  Perl sets this
 value according to the OS perl is running on:
 
   Windows="\r\n"
@@ -1188,7 +1202,7 @@ Can be used to output debug information.  Default is "0".
 =head2 file()
 
 Specify file name and optionally additional parameters that will be
-used to obtain a filehandle.  The argument can be a filename (SCALAR)
+used to obtain a filehandle.  The argument can be a filename (SCALAR),
 an ARRAY reference or an ARRAY whose values must be valid arguments
 for passing to IO::File->new.
 
@@ -1202,13 +1216,13 @@ For output files, be sure to open the file in write mode.
 
 =head2 record_separator()
 
-Returns the currently used record_separator. This is used primarly in
+Returns the currently used record_separator.  This is used primarly in
 situations where you open a QIF file with autodetect and then want to
 write out a QIF file in the same format.
 
   my $in  = Finance::QIF->new( file => "input.qif", autodetect => 1 );
   my $out = Finance::QIF->new( file => ">write.qif",
-                               record_separator => $in->record_separator() );
+                               record_separator => $in->record_separator );
 
 =head2 open()
 
@@ -1224,7 +1238,7 @@ For input files return the next record in the QIF file.
 
   my $record = $in->next();
 
-Returns null if no more records are available.
+Returns undef if no more records are available.
 
 =head2 header()
 
@@ -1293,7 +1307,7 @@ Matthew McGillis E<lt>matthew@mcgillis.orgE<gt> L<http://www.mcgillis.org/>
 
 Phil Lobbes E<lt>phil at perkpartners dot comE<gt>
 
-Project maintaned at L<http://www.sourceforge.net/projects/finance-qif>
+Project maintaned at L<http://sourceforge.net/projects/finance-qif>
 
 =head1 COPYRIGHT
 

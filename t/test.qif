@@ -51,7 +51,7 @@ ANote on portfolio
 TPort
 B2,651.00
 ^
-!Clear:AutoSwitch
+!Clear:AutoSwitch 
 !Type:Security
 NIntuit
 SINTU
@@ -174,6 +174,18 @@ E
 ^
 NInterest Inc
 DInterest Income
+B1.00
+B0.00
+B0.00
+B1.00
+B0.00
+B0.00
+B1.00
+B0.00
+B0.00
+B0.00
+B0.00
+B1.00
 I
 T
 R4592

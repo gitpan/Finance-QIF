@@ -28,7 +28,7 @@ while ( my $record = $qif->next() ) {
         }
     }
     if ( exists( $record->{budget} ) ) {
-        print "     Budget: ";
+        print "     budget: ";
         foreach my $amount ( @{ $record->{budget} } ) {
             print " " . $amount;
         }

@@ -1,5 +1,11 @@
 Revision history for Perl extension Finance::QIF.
 
+2.05  Sun Feb 04 13:00:00 2007
+	- Better recognition of headers that have trailing white space
+	- Added support for budget ("B") item in category type
+	- Added support for total ("U") item in memorized type
+	- Number of documentation changes/corrections
+
 2.04  Wed Jul 19 9:00:00 2006
 	- Added autodetect option
 	- Fixed bug that caused wrong separator to be used on output files
