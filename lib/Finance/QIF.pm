@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use IO::File;
 
-our $VERSION = '2.05';
+our $VERSION = '2.06';
 $VERSION = eval $VERSION;
 
 my %noninvestment = (
@@ -162,10 +162,7 @@ sub new {
     $self->{debug}            = $opt{debug}            || 0;
     $self->{autodetect}       = $opt{autodetect}       || 0;
     $self->{trim_white_space} = $opt{trim_white_space} || 0;
-         $self->{record_separator} = $opt{record_separator}
-      || $opt{input_record_separator}
-      || $opt{output_record_separator}
-      || $/;
+    $self->{record_separator} = $opt{record_separator} || $/;
 
     bless( $self, $class );
 
@@ -201,6 +198,7 @@ sub _filehandle {
         my @args = @_;
         $self->{_filehandle} = IO::File->new(@args)
           or croak("Failed to open file '$args[0]': $!");
+        $self->{_filehandle}->binmode();
         $self->{_linecount} = 0;
     }
     if ( !$self->{_filehandle} ) {
@@ -1149,14 +1147,6 @@ which is typical of Mac however the native perl in MacOS X is unix
 based and uses the default unix separator which is "\n".  See
 L</autodetect> for another option.
 
-=item input_record_separator
-
-DEPRECATED: use record_separator, this will not be supported next release.
-
-=item output_record_separator
-
-DEPRECATED: use record_separator, this will not be supported next release.
-
 =item autodetect
 
 Enable auto detection of the record separator based on the file
@@ -1183,6 +1173,16 @@ seek can not be performed or the last 2 characters are not a proper
 separator the record_separator will default to $/ or the value passed
 in. If a valid record_separator is found then it will be set according
 to what was in the file.
+
+This code requires a file use a consistent line separator. If you find
+your self dealing with unusual files containing mixed separators you
+need to first Normalize the file to a consistent separator.
+
+Normalizing a text file to have a consistent line separator is done in
+modules like  File::LocalizeNewlines or Template::Parser::LocalizeNewlines
+so if you are having issues with trying to process poorly formated text
+files look at preprocessing them with something like those before passing
+on to Finance::QIF.
 
 =item trim_white_space
 
@@ -1307,12 +1307,15 @@ Matthew McGillis E<lt>matthew@mcgillis.orgE<gt> L<http://www.mcgillis.org/>
 
 Phil Lobbes E<lt>phil at perkpartners dot comE<gt>
 
-Project maintaned at L<http://sourceforge.net/projects/finance-qif>
+Project maintained at L<http://sourceforge.net/projects/finance-qif>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2006 by Matthew McGillis.  All rights reserved.  This
-library is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
+Copyright (C) 2006-2007 by Matthew McGillis.  All rights reserved.
+
+=head1 LICENSE
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
 
 =cut

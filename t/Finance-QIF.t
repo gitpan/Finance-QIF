@@ -4,7 +4,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 964;
+use Test::More tests => 962;
 use File::Temp;
 
 my $DOWARN;
@@ -39,12 +39,6 @@ my $testfile = "t/test.qif";
 
     is( $obj->{debug}, 1, "custom debug value" );
     is( $obj->record_separator, "X\rX\n", "custom record separator" );
-
-    $obj = $package->new( input_record_separator => "X\rX\n" );
-    is( $obj->record_separator, "X\rX\n", "custom input record separator" );
-
-    $obj = $package->new( output_record_separator => "X\rX\n" );
-    is( $obj->record_separator, "X\rX\n", "custom output record separator" );
 }
 
 {    # autodetect

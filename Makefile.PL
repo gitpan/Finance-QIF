@@ -10,9 +10,10 @@ WriteMakefile(
         $] >= 5.005
         ?                                     ## keywords supported since 5.005
           (
+            LICENSE       => 'perl',
             ABSTRACT_FROM => 'lib/Finance/QIF.pm',
-            AUTHOR        => 'Matthew McGillis <matthew@mcgillis.org>'
-              . ' and Phil Lobbes <phil@perkpartners.com>'
+            AUTHOR        => 'Matthew McGillis <matthew@mcgillis.org> & ' .
+                             'Phil Lobbes <phil@perkpartners.com>'
           )
         : ()
     ),
