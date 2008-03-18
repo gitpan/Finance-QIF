@@ -1,13 +1,14 @@
 --- #YAML:1.0
 name:                Finance-QIF
-version:             2.06
+version:             2.07
 abstract:            Parse and create Quicken Interchange Format files
 license:             perl
-generated_by:        ExtUtils::MakeMaker version 6.32
+author:              
+    - Matthew McGillis <matthew@mcgillis.org> & Phil Lobbes <phil@perkpartners.com>
+generated_by:        ExtUtils::MakeMaker version 6.44
 distribution_type:   module
 requires:     
+    IO::File:                      1.13
 meta-spec:
-    url:     http://module-build.sourceforge.net/META-spec-v1.2.html
-    version: 1.2
-author:
-    - Matthew McGillis <matthew@mcgillis.org> & Phil Lobbes <phil@perkpartners.com>
+    url:     http://module-build.sourceforge.net/META-spec-v1.3.html
+    version: 1.3

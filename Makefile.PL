@@ -5,7 +5,7 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
     'NAME'         => 'Finance::QIF',
     'VERSION_FROM' => 'lib/Finance/QIF.pm',
-    'PREREQ_PM'    => {},                     # e.g., Module::Name => 1.1
+    'PREREQ_PM'    => { 'IO::File' => 1.13 },  # e.g., Module::Name => 1.1
     (
         $] >= 5.005
         ?                                     ## keywords supported since 5.005

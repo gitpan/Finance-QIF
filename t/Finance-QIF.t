@@ -141,8 +141,11 @@ my $testfile = "t/test.qif";
     $obj = $package->new( file => $testfile );
     is( $obj->file, $testfile, "new with scalar file argument" );
 
-    $obj = $package->new( file => [ $testfile, "<:crlf" ] );
-    is( $obj->file, $testfile, "new with arrayref file argument" );
+    SKIP: {
+      skip "Perl 5.008 not installed", 1 if $]<5.008;
+      $obj = $package->new( file => [ $testfile, "<:crlf" ] );
+      is( $obj->file, $testfile, "new with arrayref file argument" );
+    }
 
     is_deeply( [ $obj->file( 1, 2 ) ], [ 1, 2 ], "file returns list" );
 }

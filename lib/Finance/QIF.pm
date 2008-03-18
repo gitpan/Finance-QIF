@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use IO::File;
 
-our $VERSION = '2.06';
+our $VERSION = '2.07';
 $VERSION = eval $VERSION;
 
 my %noninvestment = (
@@ -1203,7 +1203,7 @@ Can be used to output debug information.  Default is "0".
 
 Specify file name and optionally additional parameters that will be
 used to obtain a filehandle.  The argument can be a filename (SCALAR),
-an ARRAY reference or an ARRAY whose values must be valid arguments
+an ARRAY reference, or an ARRAY whose values must be valid arguments
 for passing to IO::File->new.
 
   $qif->file( "myfile" );
@@ -1311,7 +1311,7 @@ Project maintained at L<http://sourceforge.net/projects/finance-qif>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2006-2007 by Matthew McGillis.  All rights reserved.
+Copyright (C) 2006-2008 by Matthew McGillis.  All rights reserved.
 
 =head1 LICENSE
 
