@@ -6,14 +6,14 @@ use warnings;
 use Carp;
 use IO::File;
 
-our $VERSION = '2.07';
+our $VERSION = '3.00';
 $VERSION = eval $VERSION;
 
 my %noninvestment = (
     "D" => "date",
-    "T" => "amount",
-    "U" => "total",      #Quicken 2005 added this which is usually the same as
-                         #as T but can sometimes be higher.
+    "T" => "transaction",
+    "U" => "total",         #Quicken 2005 added this which is usually the same
+                            #as T but can sometimes be higher.
     "C" => "status",
     "N" => "number",
     "P" => "payee",
@@ -72,8 +72,8 @@ my %class = (
 );
 
 my %memorized = (
-    "K" => "transaction",
-    "T" => "amount",
+    "K" => "type",
+    "T" => "transaction",
     "U" => "total",        #Quicken 2005 added this which is usually the same as
                            #as T but can sometimes be higher.
     "C" => "status",
@@ -82,6 +82,11 @@ my %memorized = (
     "A" => "address",
     "L" => "category",
     "S" => "splits",
+    "N" => "action",       #Quicken 2006 added N, Y, I, Q, $ for investment
+    "Y" => "security",
+    "I" => "price",
+    "Q" => "quantity",
+    '$' => "amount",
     "1" => "first",
     "2" => "years",
     "3" => "made",
@@ -309,12 +314,7 @@ sub next {
                     push( @{ $object{splits} }, \%mysplit );
                     $csplit = \%mysplit;
                 }
-                elsif (
-                    ( $field eq 'E' || $field eq '$' )
-                    && (   \%{ $header{ $object{header} } } == \%noninvestment
-                        || \%{ $header{ $object{header} } } == \%memorized )
-                  )
-                {
+                elsif ( ( $field eq 'E' || $field eq '$' ) && $csplit ) {
 
                     # this currently assumes the "S" was found first
                     $csplit->{ $split{$field} } = $value;
@@ -354,13 +354,15 @@ sub _parseline {
         my %price;
         $line =~ s/\"//g;
         my @data = split( ",", $line );
-        $result[0]       = $data[0];
-        $price{"close"}  = $data[1];
-        $price{"date"}   = $data[2];
-        $price{"max"}    = $data[3];
-        $price{"min"}    = $data[4];
-        $price{"volume"} = $data[5];
-        $result[1]       = \%price;
+        $result[0]      = $data[0];
+        $price{"close"} = $data[1];
+        $price{"date"}  = $data[2];
+        if ( scalar(@data) > 3 ) {
+            $price{"max"}    = $data[3];
+            $price{"min"}    = $data[4];
+            $price{"volume"} = $data[5];
+        }
+        $result[1] = \%price;
     }
     else {
         $result[0] = substr( $line, 0, 1 );
@@ -438,6 +440,16 @@ sub write {
                                 $price->{max},
                                 $price->{min},
                                 $price->{volume} )
+                        );
+                    }
+                    elsif (exists( $price->{close} )
+                        && exists( $price->{date} ) )
+                    {
+                        $self->_writeline(
+                            join( ",",
+                                '"' . $record->{symbol} . '"',
+                                $price->{close},
+                                '"' . $price->{date} . '"' )
                         );
                     }
                     else {
@@ -639,13 +651,13 @@ types support the following values.
 
 Date of transaction.
 
-=item amount
+=item transaction
 
 Dollar amount of transaction.
 
 =item total
 
-Dollar amount of transaction. This is generally the same as amount but
+Dollar amount of transaction. This is generally the same as transaction but
 in some cases can be higher. (Introduced in Quicken 2005 for windows)
 
 =item status
@@ -865,12 +877,12 @@ supported for memorized transaction records.
 
 =over
 
-=item transaction
+=item type
 
 Type of memorized transaction "C" for check, "D" for deposit, "P" for
 payment, "I" for investment, and "E" for electronic payee.
 
-=item amount
+=item transaction
 
 Dollar amount of transaction.
 
@@ -898,6 +910,23 @@ Address of payee.
 =item category
 
 Category the transaction is assigned to.
+
+=item action
+
+Type of investment transaction like buty, sell, ... (Inroduced in Quicken
+2006 for windows)
+
+=item security
+
+Security name of transaction. (Inroduced in Quicken 2006 for windows)
+
+=item price
+
+Price of security. (Inroduced in Quicken 2006 for windows)
+
+=item amount
+
+Dollar amount of transaction. (Introduced in Quicken 2006 for windows)
 
 =item splits
 

@@ -1,5 +1,17 @@
 Revision history for Perl extension Finance::QIF.
 
+3.00  Thu Jul 24 12:17:00 2008
+	- Added support for Quicken 2006 new Memorized Investment fields
+	- Added support for Quicken 2006 Price format
+	- The changes for the Memorized investment created a conflict with
+          naming to get things consistent and to hopefully avoid future
+          issues some value names have changed. This is the reason for a 3.00.
+          Old code may require modification this map will help in porting
+	  Old Name                   New Name
+	  noninvestment:amount       noninvestment:transaction
+	  memorized:transaction      memorized:type
+	  memorized:amount           memorized:transaction
+
 2.07  Tue Mar 18 12:06:00 2008
         - No changes to actual code other than version number and COPYRIGHT
           update.
