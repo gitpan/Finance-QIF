@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use IO::File;
 
-our $VERSION = '3.00';
+our $VERSION = '3.01';
 $VERSION = eval $VERSION;
 
 my %noninvestment = (
@@ -36,8 +36,8 @@ my %investment = (
     "I" => "price",
     "Q" => "quantity",
     "T" => "transaction",
-    "U" => "total",        #Quicken 2005 added this which is usually the same as
-                           #as T but can sometimes be higher.
+    "U" => "total",         #Quicken 2005 added this which is usually the same
+                            #as T but can sometimes be higher.
     "C" => "status",
     "P" => "text",
     "M" => "memo",
@@ -203,7 +203,7 @@ sub _filehandle {
         my @args = @_;
         $self->{_filehandle} = IO::File->new(@args)
           or croak("Failed to open file '$args[0]': $!");
-        $self->{_filehandle}->binmode();
+        binmode( $self->{_filehandle} );
         $self->{_linecount} = 0;
     }
     if ( !$self->{_filehandle} ) {
@@ -223,14 +223,14 @@ sub open {
             if ( $self->_filehandle->seek( -2, 2 ) ) {
                 my $buffer = "";
                 $self->_filehandle->read( $buffer, 2 );
-                if ( $buffer eq "\r\n" ) {
-                    $self->{record_separator} = "\r\n";
+                if ( $buffer eq "\015\012" ) {
+                    $self->{record_separator} = "\015\012";
                 }
-                elsif ( $buffer =~ /\n$/ ) {
-                    $self->{record_separator} = "\n";
+                elsif ( $buffer =~ /\012$/ ) {
+                    $self->{record_separator} = "\012";
                 }
-                elsif ( $buffer =~ /\r$/ ) {
-                    $self->{record_separator} = "\r";
+                elsif ( $buffer =~ /\015$/ ) {
+                    $self->{record_separator} = "\015";
                 }
             }
         }
@@ -799,9 +799,9 @@ limit over credit.
 
 Defined if the account is tax related.
 
-=item address
+=item note
 
-Address associated with the account.
+Additional information about the account.
 
 =item type
 
@@ -923,6 +923,10 @@ Security name of transaction. (Inroduced in Quicken 2006 for windows)
 =item price
 
 Price of security. (Inroduced in Quicken 2006 for windows)
+
+=item quantity
+
+Quantity of security. (Inroduced in Quicken 2006 for windows)
 
 =item amount
 
@@ -1168,12 +1172,12 @@ For output files, be sure to open the file in write mode.  For example:
 
 Can be used to redefine the QIF record separator.  Default is $/.
 
-  my $in = Finance::QIF->new( record_separator => "\n" );
+  my $in = Finance::QIF->new( record_separator => "\012" );
 
 Note: For MacOS X it will most likely be necessary to change this to
-"\r".  Quicken on MacOS X generates files with "\r" as the separator
+"\015".  Quicken on MacOS X generates files with "\015" as the separator
 which is typical of Mac however the native perl in MacOS X is unix
-based and uses the default unix separator which is "\n".  See
+based and uses the default unix separator which is "\012".  See
 L</autodetect> for another option.
 
 =item autodetect
@@ -1186,9 +1190,9 @@ contents.  Default is "0".
 Perl uses $/ to define line separators for text files.  Perl sets this
 value according to the OS perl is running on:
 
-  Windows="\r\n"
-  Mac="\r"
-  Unix="\n"
+  Windows="\015\012"
+  Mac="\015"
+  Unix="\012"
 
 In many cases you may find yourself with text files that do not match
 the OS.  In these cases Finance::QIF by default will not process that

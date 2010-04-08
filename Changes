@@ -1,5 +1,10 @@
 Revision history for Perl extension Finance::QIF.
 
+3.01  Thu Apr 08 12:30:00 EDT 2010
+	- Corrected documentation for Account and Type:Memorized
+        - Updated code separators based on perlport "NEWLINES" recommendation
+	- Use binmode in more compatible manner (older IO::File missing method)
+
 3.00  Thu Jul 24 12:17:00 2008
 	- Added support for Quicken 2006 new Memorized Investment fields
 	- Added support for Quicken 2006 Price format

@@ -5,7 +5,7 @@
 use strict;
 use warnings;
 use Test::More tests => 998;
-use File::Temp;
+use File::Temp qw(tempfile);
 
 my $DOWARN;
 
@@ -42,43 +42,43 @@ my $testfile = "t/test.qif";
 }
 
 {    # autodetect
-    my ( $fh, $obj );
+    my ( $fh, $fn, $obj );
 
-    $fh = File::Temp->new;
-    $fh->close;
+    ( $fh, $fn ) = tempfile();
+    close($fh);
 
-    $obj = $package->new( file => $fh->filename, autodetect => 1 );
+    $obj = $package->new( file => $fn, autodetect => 1 );
     is( $obj->record_separator, $/, "autodetect default record separator" );
 
-    $fh = File::Temp->new;
-    print( $fh "Testing Windows\r\n" );
-    $fh->close;
+    ( $fh, $fn ) = tempfile();
+    print( $fh "Testing Windows\015\012" );
+    close($fh);
 
-    $obj = $package->new( file => $fh->filename, autodetect => 1 );
-    is( $obj->record_separator, "\r\n", "autodetect windows record separator" );
+    $obj = $package->new( file => $fn, autodetect => 1 );
+    is( $obj->record_separator, "\015\012", "autodetect windows record separator" );
 
-    $fh = File::Temp->new;
-    print( $fh "Testing Mac\r" );
-    $fh->close;
+    ( $fh, $fn ) = tempfile();
+    print( $fh "Testing Mac\015" );
+    close($fh);
 
-    $obj = $package->new( file => $fh->filename, autodetect => 1 );
-    is( $obj->record_separator, "\r", "autodetect mac record separator" );
+    $obj = $package->new( file => $fn, autodetect => 1 );
+    is( $obj->record_separator, "\015", "autodetect mac record separator" );
 
-    $fh = File::Temp->new;
-    print( $fh "Testing Unix\n" );
-    $fh->close;
+    ( $fh, $fn ) = tempfile();
+    print( $fh "Testing Unix\012" );
+    close($fh);
 
-    $obj = $package->new( file => $fh->filename, autodetect => 1 );
-    is( $obj->record_separator, "\n", "autodetect unix record separator" );
+    $obj = $package->new( file => $fn, autodetect => 1 );
+    is( $obj->record_separator, "\012", "autodetect unix record separator" );
 }
 
 {    # trim_white_space
 
-    my $fh = File::Temp->new;
+    my ( $fh, $fn ) = tempfile();
     print( $fh "!Type:Security\nNIntuit \nS INTU\nT Stock \nGHigh Risk\n^\n" );
-    $fh->close;
+    close($fh);
 
-    my $obj = $package->new( file => $fh->filename, autodetect => 1 );
+    my $obj = $package->new( file => $fn, autodetect => 1 );
     ok( $obj->{trim_white_space} == 0, "trim_white_space not set" );
     my $record = $obj->next();
 
@@ -87,7 +87,7 @@ my $testfile = "t/test.qif";
     ok( $record->{type}     eq " Stock ", "trim_white_space both" );
 
     $obj = $package->new(
-        file             => $fh->filename,
+        file             => $fn,
         autodetect       => 1,
         trim_white_space => 1
     );
@@ -110,11 +110,11 @@ my $testfile = "t/test.qif";
         "reset without a filehandle croaks"
     );
 
-    my $fh = File::Temp->new;
+    my ( $fh, $fn ) = tempfile();
     print( $fh "!Type:Security\nNIntuit\nSINTU\nTStock\nGHigh Risk\n^\n" );
-    $fh->close;
+    close($fh);
 
-    $obj = $package->new( file => $fh->filename, autodetect => 1 );
+    $obj = $package->new( file => $fn, autodetect => 1 );
     my $record1 = $obj->next;
     $obj->reset;
     my $record2 = $obj->next;
@@ -141,10 +141,10 @@ my $testfile = "t/test.qif";
     $obj = $package->new( file => $testfile );
     is( $obj->file, $testfile, "new with scalar file argument" );
 
-  SKIP: {
-        skip "Perl 5.008 not installed", 1 if $] < 5.008;
-        $obj = $package->new( file => [ $testfile, "<:crlf" ] );
-        is( $obj->file, $testfile, "new with arrayref file argument" );
+    SKIP: {
+      skip "Perl 5.008 not installed", 1 if $]<5.008;
+      $obj = $package->new( file => [ $testfile, "<:crlf" ] );
+      is( $obj->file, $testfile, "new with arrayref file argument" );
     }
 
     is_deeply( [ $obj->file( 1, 2 ) ], [ 1, 2 ], "file returns list" );
@@ -190,18 +190,16 @@ my $in = $package->new(
     file       => $testfile,
     autodetect => 1
 );
-binmode $in->_filehandle;
 
-my $fh = File::Temp->new;
-$fh->close;
+my ( $fh, $fn ) = tempfile();
+close($fh);
 
-my $tempfile = $fh->filename;
+my $tempfile = $fn;
 
 my $out = $package->new(
     file             => ">" . $tempfile,
     record_separator => $in->record_separator
 );
-binmode $out->_filehandle;
 
 # Trap warning so we can validate message returned.
 $DOWARN = 0;
@@ -254,7 +252,6 @@ sub testfile {
         file             => $file,
         record_separator => "\n"
     );
-    binmode $qif->_filehandle;
 
     # account tests
     {
@@ -446,20 +443,20 @@ sub testfile {
         ok( $record->{type}    eq "Bank",     $test . "Bank" );
         ok( $record->{balance} eq "1,465.00", $test . "Bank" );
         $record = $qif->next;
-        ok( $record->{header}      eq "Type:Bank",       $test . "Bank" );
-        ok( $record->{date}        eq "1/10/06",         $test . "Bank" );
-        ok( $record->{payee}       eq "Opening Balance", $test . "Bank" );
-        ok( $record->{memo}        eq "",                $test . "Bank" );
-        ok( $record->{transaction} eq "0.00",            $test . "Bank" );
-        ok( $record->{address}     eq "",                $test . "Bank" );
-        ok( $record->{status}      eq "X",               $test . "Bank" );
-        ok( $record->{category}    eq "[Bank]",          $test . "Bank" );
+        ok( $record->{header}   eq "Type:Bank",       $test . "Bank" );
+        ok( $record->{date}     eq "1/10/06",         $test . "Bank" );
+        ok( $record->{payee}    eq "Opening Balance", $test . "Bank" );
+        ok( $record->{memo}     eq "",                $test . "Bank" );
+        ok( $record->{transaction}   eq "0.00",            $test . "Bank" );
+        ok( $record->{address}  eq "",                $test . "Bank" );
+        ok( $record->{status}   eq "X",               $test . "Bank" );
+        ok( $record->{category} eq "[Bank]",          $test . "Bank" );
         $record = $qif->next;
         ok( $record->{header}              eq "Type:Bank", $test . "Bank" );
         ok( $record->{date}                eq "1/10/06",   $test . "Bank" );
         ok( $record->{payee}               eq "Paycheck",  $test . "Bank" );
         ok( $record->{memo}                eq "",          $test . "Bank" );
-        ok( $record->{transaction}         eq "1,690.00",  $test . "Bank" );
+        ok( $record->{transaction}              eq "1,690.00",  $test . "Bank" );
         ok( $record->{address}             eq "",          $test . "Bank" );
         ok( $record->{category}            eq "Salary",    $test . "Bank" );
         ok( $record->{splits}[0]{category} eq "Salary",    $test . "Bank" );
@@ -477,19 +474,19 @@ sub testfile {
         ok( $record->{splits}[3]{memo}   eq "",       $test . "Bank" );
         ok( $record->{splits}[3]{amount} eq "-10.00", $test . "Bank" );
         $record = $qif->next;
-        ok( $record->{header}      eq "Type:Bank", $test . "Bank" );
-        ok( $record->{date}        eq "1/17/06",   $test . "Bank" );
-        ok( $record->{payee}       eq "Safeway",   $test . "Bank" );
-        ok( $record->{memo}        eq "",          $test . "Bank" );
-        ok( $record->{transaction} eq "-100.00",   $test . "Bank" );
-        ok( $record->{address}     eq "",          $test . "Bank" );
-        ok( $record->{category}    eq "Groceries", $test . "Bank" );
+        ok( $record->{header}   eq "Type:Bank", $test . "Bank" );
+        ok( $record->{date}     eq "1/17/06",   $test . "Bank" );
+        ok( $record->{payee}    eq "Safeway",   $test . "Bank" );
+        ok( $record->{memo}     eq "",          $test . "Bank" );
+        ok( $record->{transaction}   eq "-100.00",   $test . "Bank" );
+        ok( $record->{address}  eq "",          $test . "Bank" );
+        ok( $record->{category} eq "Groceries", $test . "Bank" );
         $record = $qif->next;
         ok( $record->{header}              eq "Type:Bank", $test . "Bank" );
         ok( $record->{date}                eq "2/17/06",   $test . "Bank" );
         ok( $record->{payee}               eq "Safeway",   $test . "Bank" );
         ok( $record->{memo}                eq "",          $test . "Bank" );
-        ok( $record->{transaction}         eq "-125.00",   $test . "Bank" );
+        ok( $record->{transaction}              eq "-125.00",   $test . "Bank" );
         ok( $record->{address}             eq "",          $test . "Bank" );
         ok( $record->{number}              eq ">>>>>",     $test . "Bank" );
         ok( $record->{category}            eq "Groceries", $test . "Bank" );
@@ -500,24 +497,24 @@ sub testfile {
         ok( $record->{splits}[1]{memo}     eq "",          $test . "Bank" );
         ok( $record->{splits}[1]{amount}   eq "-25.00",    $test . "Bank" );
         $record = $qif->next;
-        ok( $record->{header}      eq "Type:Bank", $test . "Bank" );
-        ok( $record->{date}        eq "3/17/06",   $test . "Bank" );
-        ok( $record->{payee}       eq "Safeway",   $test . "Bank" );
-        ok( $record->{memo}        eq "",          $test . "Bank" );
-        ok( $record->{transaction} eq "-100.00",   $test . "Bank" );
-        ok( $record->{total}       eq "-100.00",   $test . "Bank" );
-        ok( $record->{address}     eq "",          $test . "Bank" );
-        ok( $record->{category}    eq "Groceries", $test . "Bank" );
+        ok( $record->{header}   eq "Type:Bank", $test . "Bank" );
+        ok( $record->{date}     eq "3/17/06",   $test . "Bank" );
+        ok( $record->{payee}    eq "Safeway",   $test . "Bank" );
+        ok( $record->{memo}     eq "",          $test . "Bank" );
+        ok( $record->{transaction}   eq "-100.00",   $test . "Bank" );
+        ok( $record->{total}    eq "-100.00",   $test . "Bank" );
+        ok( $record->{address}  eq "",          $test . "Bank" );
+        ok( $record->{category} eq "Groceries", $test . "Bank" );
         $qif->{trim_white_space} = 1;
         $record = $qif->next;
-        ok( $record->{header}      eq "Type:Bank", $test . "Bank" );
-        ok( $record->{date}        eq "3/17/06",   $test . "Bank" );
-        ok( $record->{payee}       eq "QFC",       $test . "Bank" );
-        ok( $record->{memo}        eq "",          $test . "Bank" );
-        ok( $record->{transaction} eq "-100.00",   $test . "Bank" );
-        ok( $record->{total}       eq "-100.00",   $test . "Bank" );
-        ok( $record->{address}     eq "",          $test . "Bank" );
-        ok( $record->{category}    eq "Groceries", $test . "Bank" );
+        ok( $record->{header}   eq "Type:Bank", $test . "Bank" );
+        ok( $record->{date}     eq "3/17/06",   $test . "Bank" );
+        ok( $record->{payee}    eq "QFC",       $test . "Bank" );
+        ok( $record->{memo}     eq "",          $test . "Bank" );
+        ok( $record->{transaction}   eq "-100.00",   $test . "Bank" );
+        ok( $record->{total}    eq "-100.00",   $test . "Bank" );
+        ok( $record->{address}  eq "",          $test . "Bank" );
+        ok( $record->{category} eq "Groceries", $test . "Bank" );
         $qif->{trim_white_space} = 0;
     }
 
@@ -529,14 +526,14 @@ sub testfile {
         ok( $record->{type}    eq "Cash",    $test . "Cash" );
         ok( $record->{balance} eq "0.00",    $test . "Cash" );
         $record = $qif->next;
-        ok( $record->{header}      eq "Type:Cash",       $test . "Cash" );
-        ok( $record->{date}        eq "1/10/06",         $test . "Cash" );
-        ok( $record->{payee}       eq "Opening Balance", $test . "Cash" );
-        ok( $record->{memo}        eq "",                $test . "Cash" );
-        ok( $record->{transaction} eq "0.00",            $test . "Cash" );
-        ok( $record->{address}     eq "",                $test . "Cash" );
-        ok( $record->{status}      eq "X",               $test . "Cash" );
-        ok( $record->{category}    eq "[Cash]",          $test . "Cash" );
+        ok( $record->{header}   eq "Type:Cash",       $test . "Cash" );
+        ok( $record->{date}     eq "1/10/06",         $test . "Cash" );
+        ok( $record->{payee}    eq "Opening Balance", $test . "Cash" );
+        ok( $record->{memo}     eq "",                $test . "Cash" );
+        ok( $record->{transaction}   eq "0.00",            $test . "Cash" );
+        ok( $record->{address}  eq "",                $test . "Cash" );
+        ok( $record->{status}   eq "X",               $test . "Cash" );
+        ok( $record->{category} eq "[Cash]",          $test . "Cash" );
     }
 
     # Credit Card test
@@ -548,14 +545,14 @@ sub testfile {
         ok( $record->{type}    eq "CCard",       $test . "Credit Card" );
         ok( $record->{balance} eq "0.00",        $test . "Credit Card" );
         $record = $qif->next;
-        ok( $record->{header} eq "Type:CCard",      $test . "Credit Card" );
-        ok( $record->{date}   eq "1/10/06",         $test . "Credit Card" );
-        ok( $record->{payee}  eq "Opening Balance", $test . "Credit Card" );
-        ok( $record->{memo}   eq "",                $test . "Credit Card" );
-        ok( $record->{transaction} eq "0.00",          $test . "Credit Card" );
-        ok( $record->{address}     eq "",              $test . "Credit Card" );
-        ok( $record->{status}      eq "X",             $test . "Credit Card" );
-        ok( $record->{category}    eq "[Credit Card]", $test . "Credit Card" );
+        ok( $record->{header}   eq "Type:CCard",      $test . "Credit Card" );
+        ok( $record->{date}     eq "1/10/06",         $test . "Credit Card" );
+        ok( $record->{payee}    eq "Opening Balance", $test . "Credit Card" );
+        ok( $record->{memo}     eq "",                $test . "Credit Card" );
+        ok( $record->{transaction}   eq "0.00",            $test . "Credit Card" );
+        ok( $record->{address}  eq "",                $test . "Credit Card" );
+        ok( $record->{status}   eq "X",               $test . "Credit Card" );
+        ok( $record->{category} eq "[Credit Card]",   $test . "Credit Card" );
     }
 
     # Liability test
@@ -566,14 +563,14 @@ sub testfile {
         ok( $record->{type}    eq "Oth L",     $test . "Liability" );
         ok( $record->{balance} eq "50,000.00", $test . "Liability" );
         $record = $qif->next;
-        ok( $record->{header}      eq "Type:Oth L",      $test . "Liability" );
-        ok( $record->{date}        eq "1/10/06",         $test . "Liability" );
-        ok( $record->{payee}       eq "Opening Balance", $test . "Liability" );
-        ok( $record->{memo}        eq "",                $test . "Liability" );
-        ok( $record->{transaction} eq "-50,000.00",      $test . "Liability" );
-        ok( $record->{address}     eq "",                $test . "Liability" );
-        ok( $record->{status}      eq "X",               $test . "Liability" );
-        ok( $record->{category}    eq "[Liability]",     $test . "Liability" );
+        ok( $record->{header}   eq "Type:Oth L",      $test . "Liability" );
+        ok( $record->{date}     eq "1/10/06",         $test . "Liability" );
+        ok( $record->{payee}    eq "Opening Balance", $test . "Liability" );
+        ok( $record->{memo}     eq "",                $test . "Liability" );
+        ok( $record->{transaction}   eq "-50,000.00",      $test . "Liability" );
+        ok( $record->{address}  eq "",                $test . "Liability" );
+        ok( $record->{status}   eq "X",               $test . "Liability" );
+        ok( $record->{category} eq "[Liability]",     $test . "Liability" );
     }
 
     # Mutual Fund test
@@ -627,30 +624,30 @@ sub testfile {
         $record = $qif->next;
         ok( $record->{header} eq "Type:Prices", $test . "Prices" );
         $record = $qif->next;
-        ok( $record->{header}           eq "Type:Prices", $test . "Prices" );
-        ok( $record->{symbol}           eq "WIN",         $test . "Prices" );
-        ok( $record->{prices}[0]{close} eq "19.740",      $test . "Prices" );
-        ok( $record->{prices}[0]{date}  eq "12/12/05",    $test . "Prices" );
-        ok( exists( $record->{prices}[0]{max} ) == 0,    $test . "Prices" );
-        ok( exists( $record->{prices}[0]{min} ) == 0,    $test . "Prices" );
-        ok( exists( $record->{prices}[0]{volume} ) == 0, $test . "Prices" );
+        ok( $record->{header} eq "Type:Prices", $test . "Prices" );
+        ok( $record->{symbol}            eq "WIN",        $test . "Prices" );
+        ok( $record->{prices}[0]{close}  eq "19.740",      $test . "Prices" );
+        ok( $record->{prices}[0]{date}   eq "12/12/05",    $test . "Prices" );
+        ok( exists($record->{prices}[0]{max}) == 0 ,    $test . "Prices" );
+        ok( exists($record->{prices}[0]{min})   == 0,    $test . "Prices" );
+        ok( exists($record->{prices}[0]{volume}) == 0,    $test . "Prices" );
     }
 
     # Memorized test
     {
         my $record = $qif->next;
         ok( $record->{header}      eq "Type:Memorized", $test . "Memorized" );
-        ok( $record->{transaction} eq "-50.00",         $test . "Memorized" );
+        ok( $record->{transaction}      eq "-50.00",         $test . "Memorized" );
         ok( $record->{payee}       eq "Safeway",        $test . "Memorized" );
         ok( $record->{memo}        eq "",               $test . "Memorized" );
-        ok( $record->{type}        eq "C",              $test . "Memorized" );
+        ok( $record->{type} eq "C",              $test . "Memorized" );
         $record = $qif->next;
-        ok( $record->{header}      eq "Type:Memorized", $test . "Memorized" );
-        ok( $record->{transaction} eq "-1,140.17",      $test . "Memorized" );
-        ok( $record->{payee}       eq "Bank",           $test . "Memorized" );
-        ok( $record->{memo}        eq "",               $test . "Memorized" );
-        ok( $record->{address}     eq "",               $test . "Memorized" );
-        ok( $record->{category}    eq "[Liability]",    $test . "Memorized" );
+        ok( $record->{header}   eq "Type:Memorized", $test . "Memorized" );
+        ok( $record->{transaction}   eq "-1,140.17",      $test . "Memorized" );
+        ok( $record->{payee}    eq "Bank",           $test . "Memorized" );
+        ok( $record->{memo}     eq "",               $test . "Memorized" );
+        ok( $record->{address}  eq "",               $test . "Memorized" );
+        ok( $record->{category} eq "[Liability]",    $test . "Memorized" );
         ok( $record->{splits}[0]{category} eq "[Liability]",
             $test . "Memorized" );
         ok( $record->{splits}[0]{memo}   eq "principal", $test . "Memorized" );
@@ -666,19 +663,19 @@ sub testfile {
         ok( $record->{interest}          eq "4.5",       $test . "Memorized" );
         ok( $record->{balance}           eq "25,000.00", $test . "Memorized" );
         ok( $record->{loan}              eq "25,000.00", $test . "Memorized" );
-        ok( $record->{type}              eq "P",         $test . "Memorized" );
+        ok( $record->{type}       eq "P",         $test . "Memorized" );
         $record = $qif->next;
-        ok( $record->{header}      eq "Type:Memorized", $test . "Memorized" );
-        ok( $record->{action}      eq "SellX",          $test . "Memorized" );
-        ok( $record->{security}    eq "IDS New D A",    $test . "Memorized" );
-        ok( $record->{price}       eq "22.096936",      $test . "Memorized" );
-        ok( $record->{quantity}    eq "158.393",        $test . "Memorized" );
-        ok( $record->{total}       eq "3,500.00",       $test . "Memorized" );
-        ok( $record->{transaction} eq "3,500.00",       $test . "Memorized" );
-        ok( $record->{memo}        eq "Investment",     $test . "Memorized" );
-        ok( $record->{category}    eq "[Invest]",       $test . "Memorized" );
-        ok( $record->{amount}      eq "3,500.00",       $test . "Memorized" );
-        ok( $record->{type}        eq "I",              $test . "Memorized" );
+        ok( $record->{header}   eq "Type:Memorized", $test . "Memorized" );
+        ok( $record->{action}   eq "SellX",          $test . "Memorized" );
+        ok( $record->{security} eq "IDS New D A",    $test . "Memorized" );
+        ok( $record->{price}    eq "22.096936",      $test . "Memorized" );
+        ok( $record->{quantity} eq "158.393",        $test . "Memorized" );
+        ok( $record->{total}     eq "3,500.00",      $test . "Memorized" );
+        ok( $record->{transaction}   eq "3,500.00",  $test . "Memorized" );
+        ok( $record->{memo}     eq "Investment",     $test . "Memorized" );
+        ok( $record->{category} eq "[Invest]",       $test . "Memorized" );
+        ok( $record->{amount}   eq "3,500.00",       $test . "Memorized" );
+        ok( $record->{type}     eq "I",              $test . "Memorized" );
     }
 }
 

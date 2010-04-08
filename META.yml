@@ -1,11 +1,14 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         Finance-QIF
-version:      3.00
-version_from: lib/Finance/QIF.pm
-installdirs:  site
-requires:
+--- #YAML:1.0
+name:                Finance-QIF
+version:             3.01
+abstract:            Parse and create Quicken Interchange Format files
+license:             perl
+author:              
+    - Matthew McGillis <matthew@mcgillis.org> & Phil Lobbes <phil@perkpartners.com>
+generated_by:        ExtUtils::MakeMaker version 6.42
+distribution_type:   module
+requires:     
     IO::File:                      1.11
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.30
+meta-spec:
+    url:     http://module-build.sourceforge.net/META-spec-v1.3.html
+    version: 1.3
