@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Finance-QIF
-version:             3.01
+version:             3.02
 abstract:            Parse and create Quicken Interchange Format files
 license:             perl
 author:              

@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use IO::File;
 
-our $VERSION = '3.01';
+our $VERSION = '3.02';
 $VERSION = eval $VERSION;
 
 my %noninvestment = (
@@ -520,6 +520,10 @@ sub write {
                         if ( exists( $s->{$key} ) ) {
                             $self->_writeline( $self->{reversesplitsmap}{$key},
                                 $s->{$key} );
+                        }
+                        else {
+                            $self->_writeline(
+                                $self->{reversesplitsmap}{$key} );
                         }
                     }
                 }

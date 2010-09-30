@@ -1,5 +1,8 @@
 Revision history for Perl extension Finance::QIF.
 
+3.02  Wed Sep 29 21:04:00 PDT 2010
+        - Fixed bugs with write support for splits with partial data.
+
 3.01  Thu Apr 08 12:30:00 EDT 2010
 	- Corrected documentation for Account and Type:Memorized
         - Updated code separators based on perlport "NEWLINES" recommendation
